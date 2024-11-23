@@ -30,6 +30,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.room.Room
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.ui.text.style.TextAlign
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import kotlinx.coroutines.flow.Flow
 
 class MainActivity : ComponentActivity() {
     private lateinit var viewModel: RecordViewModel
@@ -101,7 +107,7 @@ fun MyApp(viewModel: RecordViewModel) {
                 // Display different screens based on selected item
                 when (selectedItem) {
                     0 -> HomeScreen()
-                    1 -> RecordsScreen(viewModel = viewModel) // Pass viewModel here
+                    1 -> RecordsScreen(viewModel = viewModel, navController = navController) // Pass viewModel here
                     2 -> StarScreen()
                 }
             }
@@ -114,7 +120,28 @@ fun MyApp(viewModel: RecordViewModel) {
 
         // Record screen (to display records from the db)
         composable("recordsScreen") {
-            RecordsScreen(viewModel = viewModel) // Pass viewModel here as well
+            RecordsScreen(viewModel = viewModel, navController = navController) // Pass viewModel here as well
+        }
+
+        composable(
+            "editRecordScreen/{recordId}",
+            arguments = listOf(navArgument("recordId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val recordId = backStackEntry.arguments?.getInt("recordId")
+            recordId?.let {
+                // Fetch the record as a Flow
+                val recordFlow = viewModel.getRecordByIdFlow(it)
+
+                // Ensure parameter names match the function signature
+                EditRecordScreen(
+                    navController = navController,
+                    recordFlow = recordFlow, // Correct parameter name
+                    viewModel = viewModel
+                )
+            } ?: run {
+                // Handle null case (optional)
+                Text("Invalid record ID.", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center)
+            }
         }
     }
 }
@@ -125,10 +152,10 @@ fun HomeScreen() {
     Text(text = "Home Screen")
 }
 
-@Composable
-fun RecordsScreen() {
-    Text(text = "Records Screen")
-}
+//@Composable
+//fun RecordsScreen() {
+//    Text(text = "Records Screen")
+//}
 
 @Composable
 fun StarScreen() {
@@ -263,8 +290,8 @@ fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel)
 }
 
 @Composable
-fun RecordsScreen(viewModel: RecordViewModel) {
-    // Collecting records as a state, ensuring it is a List<Record> at this point
+fun RecordsScreen(viewModel: RecordViewModel, navController: NavController) {
+    // Collecting records as a state
     val records by viewModel.allRecords.collectAsState(initial = emptyList())
 
     Scaffold(
@@ -288,8 +315,8 @@ fun RecordsScreen(viewModel: RecordViewModel) {
                     .padding(innerPadding),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(records) { record ->  // Use 'items()' correctly with a List
-                    RecordItem(record)  // Composable function to display each record
+                items(records) { record ->
+                    RecordItem(record, viewModel, navController)  // Pass ViewModel and NavController
                 }
             }
         }
@@ -297,7 +324,7 @@ fun RecordsScreen(viewModel: RecordViewModel) {
 }
 
 @Composable
-fun RecordItem(record: Record) {
+fun RecordItem(record: Record, viewModel: RecordViewModel, navController: NavController) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -309,6 +336,173 @@ fun RecordItem(record: Record) {
             Text("Amount: ${record.amount}", style = MaterialTheme.typography.bodyMedium)
             Text("Date: ${record.date}", style = MaterialTheme.typography.bodySmall)
             Text("Description: ${record.description}", style = MaterialTheme.typography.bodySmall)
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                // Edit button
+                IconButton(onClick = {
+                    navController.navigate("editRecordScreen/${record.id}") // Navigate to edit screen
+                }) {
+                    Icon(Icons.Filled.Edit, contentDescription = "Edit")
+                }
+
+                // Delete button
+                IconButton(onClick = {
+                    viewModel.deleteRecord(record) // Call ViewModel to delete record
+                }) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                }
+            }
         }
     }
 }
+
+
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@Composable
+fun EditRecordScreen(
+    navController: NavController,
+    recordFlow: Flow<Record?>,
+    viewModel: RecordViewModel
+) {
+    // Collect the record from the Flow
+    val record by recordFlow.collectAsState(initial = null)
+
+    record?.let { currentRecord ->
+        // State holders for form fields
+        var amount by remember { mutableStateOf(currentRecord.amount.toString()) }
+        var date by remember { mutableStateOf(currentRecord.date) }
+        var selectedCategory by remember { mutableStateOf(currentRecord.category) }
+        var isExpense by remember { mutableStateOf(currentRecord.isExpense) }
+        var description by remember { mutableStateOf(currentRecord.description) }
+        var expanded by remember { mutableStateOf(false) }
+
+        val categories = listOf("Food", "Transport", "Rent", "Entertainment")
+
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text("Edit Record") })
+            }
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Amount field
+                item {
+                    TextField(
+                        value = amount,
+                        onValueChange = { amount = it },
+                        label = { Text("Amount") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = amount.toDoubleOrNull() == null,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Date field
+                item {
+                    TextField(
+                        value = date,
+                        onValueChange = { date = it },
+                        label = { Text("Date") },
+                        placeholder = { Text("YYYY-MM-DD") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Type toggle
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Type:")
+                        Row {
+                            Text(text = "Expense")
+                            Switch(
+                                checked = !isExpense,
+                                onCheckedChange = { isExpense = !it }
+                            )
+                            Text(text = "Income")
+                        }
+                    }
+                }
+
+                // Category dropdown
+                item {
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        TextField(
+                            value = selectedCategory,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Category") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            modifier = Modifier.menuAnchor()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            categories.forEach { category ->
+                                DropdownMenuItem(
+                                    text = { Text(category) },
+                                    onClick = {
+                                        selectedCategory = category
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Description field
+                item {
+                    TextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Description") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Update button
+                item {
+                    Button(
+                        onClick = {
+                            val updatedRecord = currentRecord.copy(
+                                amount = amount.toDoubleOrNull() ?: 0.0,
+                                date = date,
+                                isExpense = isExpense,
+                                category = selectedCategory,
+                                description = description
+                            )
+                            viewModel.updateRecord(updatedRecord)
+                            navController.popBackStack() // Navigate back
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Update Record")
+                    }
+                }
+            }
+        }
+    } ?: run {
+        // Show loading state while the record is being fetched
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    }
+}
+

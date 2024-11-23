@@ -11,4 +11,19 @@ class RecordRepository(private val recordDao: RecordDao) {
     suspend fun insertRecord(record: Record) {
         recordDao.insert(record)
     }
+
+    // Update an existing record
+    suspend fun updateRecord(record: Record) {
+        recordDao.update(record)
+    }
+
+    // Delete a specific record
+    suspend fun deleteRecord(record: Record) {
+        recordDao.delete(record)
+    }
+
+    // Fetch a record by its ID
+    fun getRecordByIdFlow(recordId: Int): Flow<Record?> {
+        return recordDao.getRecordByIdFlow(recordId)
+    }
 }
