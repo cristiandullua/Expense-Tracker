@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.expensetracker
 
 import android.annotation.SuppressLint
@@ -14,39 +16,49 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavController
 import androidx.room.Room
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.clickable
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
+import androidx.compose.foundation.lazy.items
 
 class MainActivity : ComponentActivity() {
-    private val applicationScope = CoroutineScope(SupervisorJob())
-    private val database by lazy { ExpenseTrackerDatabase.getDatabase(this, applicationScope) }
+    private lateinit var viewModel: RecordViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize Room database
+        val database = Room.databaseBuilder(
+            applicationContext,
+            AppDatabase::class.java,
+            "expense_tracker_db"
+        ).build()
+
+        val repository = RecordRepository(database.recordDao())
+        val factory = RecordViewModelFactory(repository)
+        viewModel = ViewModelProvider(this, factory).get(RecordViewModel::class.java)
+
         setContent {
-            MyApp()
+            MyApp(viewModel = viewModel)
         }
     }
 }
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun MyApp() {
+fun MyApp(viewModel: RecordViewModel) {
     val navController = rememberNavController()
-    var selectedItem by remember { mutableIntStateOf(0) }
+    var selectedItem by remember { mutableStateOf(0) }
 
     val items = listOf("Home", "Favorite", "Star")
     val selectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Favorite, Icons.Filled.Star)
@@ -86,25 +98,27 @@ fun MyApp() {
                     }
                 }
             ) {
+                // Display different screens based on selected item
                 when (selectedItem) {
                     0 -> HomeScreen()
-                    1 -> RecordsScreen()
+                    1 -> RecordsScreen(viewModel = viewModel) // Pass viewModel here
                     2 -> StarScreen()
                 }
             }
         }
 
-        // FAB screen (the new screen without navbar)
+        // FAB screen (Create new record)
         composable("fabScreen") {
-            val database = Room.databaseBuilder(
-                LocalContext.current,
-                ExpenseTrackerDatabase::class.java, "expense_tracker_db"
-            ).build()
+            CreateRecordScreen(navController = navController, viewModel = viewModel)
+        }
 
-            FabScreenPlaceholder(transactionDao = database.transactionDao())
+        // Record screen (to display records from the db)
+        composable("recordsScreen") {
+            RecordsScreen(viewModel = viewModel) // Pass viewModel here as well
         }
     }
 }
+
 
 @Composable
 fun HomeScreen() {
@@ -121,129 +135,180 @@ fun StarScreen() {
     Text(text = "Star Screen")
 }
 
-// Placeholder screen for FAB action
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun FabScreenPlaceholder(transactionDao: TransactionDao) {
-    var description by remember { mutableStateOf("") }
+fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel) {
     var amount by remember { mutableStateOf("") }
-    var place by remember { mutableStateOf("") }
-    var isIncome by remember { mutableStateOf(true) }
-    var selectedCategory by remember { mutableStateOf<Category?>(null) }
-    val scope = rememberCoroutineScope()
+    var date by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Food") }
+    var isExpense by remember { mutableStateOf(true) }
+    var description by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
 
-    // Load categories from the database
-    val categories = remember { mutableStateOf<List<Category>>(emptyList()) }
+    val categories = listOf("Food", "Transport", "Rent", "Entertainment")
 
-    LaunchedEffect(Unit) {
-        categories.value = transactionDao.getCategories()
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        TextField(
-            value = description,
-            onValueChange = { description = it },
-            label = { Text("Description") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextField(
-            value = amount,
-            onValueChange = { amount = it },
-            label = { Text("Amount") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextField(
-            value = place,
-            onValueChange = { place = it },
-            label = { Text("Place") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row {
-            Text("Type:")
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(
-                onClick = { isIncome = true },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                )
-            ) {
-                Text("Income")
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(
-                onClick = { isIncome = false },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (!isIncome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                )
-            ) {
-                Text("Expense")
-            }
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Add Record") })
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        var selectedCategory by remember { mutableStateOf<Category?>(null) }
-        var isDropdownExpanded by remember { mutableStateOf(false) }
-
-        // Display selected category or prompt text
-        Text(
-            text = selectedCategory?.name ?: "Select Category",
+    ) { innerPadding ->
+        LazyColumn(
             modifier = Modifier
-                .clickable { isDropdownExpanded = true }
-        )
-        // Category dropdown
-        DropdownMenu(
-            expanded = isDropdownExpanded,
-            onDismissRequest = { isDropdownExpanded = false }
+                .fillMaxSize()
+                .padding(innerPadding) // Ensures content is not obscured by the top bar
+                .padding(16.dp),       // Adds padding around the screen content
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            categories.value.forEach { category ->
-                DropdownMenuItem(
-                    text = { Text(category.name) }, // Use text parameter here
-                    onClick = {
-                        selectedCategory = category
-                        isDropdownExpanded = false // Close menu after selection
-                    }
+            item {
+                TextField(
+                    value = amount,
+                    onValueChange = { amount = it },
+                    label = { Text("Amount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                val transaction = Transaction(
-                    type = if (isIncome) "income" else "expense",
-                    description = description,
-                    amount = if (isIncome) amount.toDouble() else -amount.toDouble(),
-                    place = place,
-                    categoryId = selectedCategory?.id ?: 0
+            item {
+                TextField(
+                    value = date,
+                    onValueChange = { date = it },
+                    label = { Text("Date") },
+                    placeholder = { Text("YYYY-MM-DD") },
+                    modifier = Modifier.fillMaxWidth()
                 )
-                scope.launch {
-                    transactionDao.insertTransaction(transaction)
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = "Type:")
+                    Row {
+                        Text(text = "Expense")
+                        Switch(
+                            checked = !isExpense,
+                            onCheckedChange = { isExpense = !it }
+                        )
+                        Text(text = "Income")
+                    }
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Add Record")
+            }
+
+            item {
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    TextField(
+                        value = selectedCategory,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Category") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                        },
+                        modifier = Modifier.menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category) },
+                                onClick = {
+                                    selectedCategory = category
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                TextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                Button(
+                    onClick = {
+                        // Save the record to the database
+                        val record = Record(
+                            amount = amount.toDoubleOrNull() ?: 0.0,
+                            date = date,
+                            isExpense = isExpense,
+                            category = selectedCategory,
+                            description = description
+                        )
+                        viewModel.saveRecord(record)
+
+                        // Navigate back to the previous screen
+                        navController.popBackStack()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = "Save Record")
+                }
+            }
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun DefaultPreview() {
-    MyApp()
+fun RecordsScreen(viewModel: RecordViewModel) {
+    // Collecting records as a state, ensuring it is a List<Record> at this point
+    val records by viewModel.allRecords.collectAsState(initial = emptyList())
+
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Records") })
+        }
+    ) { innerPadding ->
+        if (records.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No records found.")
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(records) { record ->  // Use 'items()' correctly with a List
+                    RecordItem(record)  // Composable function to display each record
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RecordItem(record: Record) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.elevatedCardElevation()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Category: ${record.category}", style = MaterialTheme.typography.titleMedium)
+            Text("Amount: ${record.amount}", style = MaterialTheme.typography.bodyMedium)
+            Text("Date: ${record.date}", style = MaterialTheme.typography.bodySmall)
+            Text("Description: ${record.description}", style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }
