@@ -6,12 +6,13 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
@@ -30,9 +31,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.room.Room
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import kotlinx.coroutines.flow.Flow
@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
 
         val repository = RecordRepository(database.recordDao())
         val factory = RecordViewModelFactory(repository)
-        viewModel = ViewModelProvider(this, factory).get(RecordViewModel::class.java)
+        viewModel = ViewModelProvider(this, factory)[RecordViewModel::class.java]
 
         setContent {
             MyApp(viewModel = viewModel)
@@ -64,11 +64,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp(viewModel: RecordViewModel) {
     val navController = rememberNavController()
-    var selectedItem by remember { mutableStateOf(0) }
+    var selectedItem by remember { mutableIntStateOf(0) }
 
-    val items = listOf("Home", "Favorite", "Star")
-    val selectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Favorite, Icons.Filled.Star)
-    val unselectedIcons = listOf(Icons.Outlined.Home, Icons.Outlined.FavoriteBorder, Icons.Outlined.StarBorder)
+    val items = listOf("Home", "Records", "Star")
+    val selectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Payments, Icons.Filled.Star)
+    val unselectedIcons = listOf(Icons.Outlined.Home, Icons.Outlined.Payments, Icons.Outlined.StarBorder)
 
     // Navigation Host
     NavHost(navController = navController, startDestination = "mainScreen") {
@@ -151,11 +151,6 @@ fun MyApp(viewModel: RecordViewModel) {
 fun HomeScreen() {
     Text(text = "Home Screen")
 }
-
-//@Composable
-//fun RecordsScreen() {
-//    Text(text = "Records Screen")
-//}
 
 @Composable
 fun StarScreen() {
@@ -328,37 +323,45 @@ fun RecordItem(record: Record, viewModel: RecordViewModel, navController: NavCon
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(8.dp)
+            .clickable {
+                // Navigate to the EditRecordScreen when the record is clicked
+                navController.navigate("editRecordScreen/${record.id}")
+            },
         elevation = CardDefaults.elevatedCardElevation()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Category: ${record.category}", style = MaterialTheme.typography.titleMedium)
-            Text("Amount: ${record.amount}", style = MaterialTheme.typography.bodyMedium)
-            Text("Date: ${record.date}", style = MaterialTheme.typography.bodySmall)
-            Text("Description: ${record.description}", style = MaterialTheme.typography.bodySmall)
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(top = 8.dp)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically // Center content vertically
+        ) {
+            // Left Column for category, date, and description
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 16.dp)
             ) {
-                // Edit button
-                IconButton(onClick = {
-                    navController.navigate("editRecordScreen/${record.id}") // Navigate to edit screen
-                }) {
-                    Icon(Icons.Filled.Edit, contentDescription = "Edit")
-                }
+                // Category
+                Text("Category: ${record.category}", style = MaterialTheme.typography.bodyMedium)
+                // Date
+                Text("Date: ${record.date}", style = MaterialTheme.typography.bodySmall)
+                // Description
+                Text("Description: ${record.description}", style = MaterialTheme.typography.bodySmall)
+            }
 
-                // Delete button
-                IconButton(onClick = {
-                    viewModel.deleteRecord(record) // Call ViewModel to delete record
-                }) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                }
+            // Right Column for amount (larger font size)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .wrapContentWidth(Alignment.End) // Aligns the amount to the right
+            ) {
+                Text(
+                    text = "${record.amount}",
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp) // Adjust size as needed
+                )
             }
         }
     }
 }
-
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -477,7 +480,7 @@ fun EditRecordScreen(
                     )
                 }
 
-                // Update button
+                // Save record button
                 item {
                     Button(
                         onClick = {
@@ -489,11 +492,25 @@ fun EditRecordScreen(
                                 description = description
                             )
                             viewModel.updateRecord(updatedRecord)
-                            navController.popBackStack() // Navigate back
+                            navController.popBackStack() // Go back to the previous screen
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Update Record")
+                        Text(text = "Save Record")
+                    }
+                }
+
+                // Delete record button
+                item {
+                    Button(
+                        onClick = {
+                            viewModel.deleteRecord(currentRecord) // Delete record
+                            navController.popBackStack() // Go back to the previous screen
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(text = "Delete Record", color = MaterialTheme.colorScheme.onError)
                     }
                 }
             }
@@ -505,4 +522,3 @@ fun EditRecordScreen(
         }
     }
 }
-
