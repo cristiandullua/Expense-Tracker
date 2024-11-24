@@ -31,7 +31,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.room.Room
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
@@ -75,6 +78,19 @@ fun MyApp(viewModel: RecordViewModel) {
         // Main screen with navbar and FAB
         composable("mainScreen") {
             Scaffold(
+                topBar = {
+                    if (selectedItem in listOf(0, 1, 2)) { // Show header only for Home, Records, and Star
+                        Header(
+                            title = when (selectedItem) {
+                                0 -> "Home"
+                                1 -> "Records"
+                                2 -> "Star"
+                                else -> ""
+                            },
+                            onMenuClick = { /* TODO: Handle menu actions */ }
+                        )
+                    }
+                },
                 floatingActionButton = {
                     FloatingActionButton(
                         onClick = {
@@ -146,6 +162,43 @@ fun MyApp(viewModel: RecordViewModel) {
     }
 }
 
+@Composable
+fun Header(title: String, onMenuClick: () -> Unit) {
+    TopAppBar(
+        title = { Text(title) },
+        actions = {
+            DropdownMenuButton(onMenuClick)
+        }
+    )
+}
+
+@Composable
+fun DropdownMenuButton(onMenuClick: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+
+    IconButton(onClick = { expanded = !expanded }) {
+        Icon(Icons.Filled.MoreVert, contentDescription = "Menu")
+    }
+
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = { expanded = false }
+    ) {
+        DropdownMenuItem(
+            text = { Text("Option 1") },
+            onClick = { onMenuClick() }
+        )
+        DropdownMenuItem(
+            text = { Text("Option 2") },
+            onClick = { onMenuClick() }
+        )
+        DropdownMenuItem(
+            text = { Text("Option 3") },
+            onClick = { onMenuClick() }
+        )
+    }
+}
+
 
 @Composable
 fun HomeScreen() {
@@ -202,18 +255,30 @@ fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel)
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "Type:")
-                    Row {
-                        Text(text = "Expense")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Expense",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
                         Switch(
                             checked = !isExpense,
                             onCheckedChange = { isExpense = !it }
                         )
-                        Text(text = "Income")
+                        Text(
+                            text = "Income",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
                     }
                 }
             }
@@ -386,7 +451,20 @@ fun EditRecordScreen(
 
         Scaffold(
             topBar = {
-                TopAppBar(title = { Text("Edit Record") })
+                TopAppBar(
+                    title = { Text("Edit Record") },
+                    actions = {
+                        IconButton(onClick = {
+                            viewModel.deleteRecord(currentRecord)
+                            navController.popBackStack() // Navigate back after deletion
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Record"
+                            )
+                        }
+                    }
+                )
             }
         ) { innerPadding ->
             LazyColumn(
@@ -496,21 +574,7 @@ fun EditRecordScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Save Record")
-                    }
-                }
-
-                // Delete record button
-                item {
-                    Button(
-                        onClick = {
-                            viewModel.deleteRecord(currentRecord) // Delete record
-                            navController.popBackStack() // Go back to the previous screen
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text(text = "Delete Record", color = MaterialTheme.colorScheme.onError)
+                        Text(text = "Save Changes")
                     }
                 }
             }

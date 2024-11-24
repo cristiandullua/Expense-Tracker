@@ -98,5 +98,8 @@ dependencies {
     // optional - Paging 3 Integration
     implementation("androidx.room:room-paging:$room_version")
 
+    implementation("androidx.compose.ui:ui-tooling-preview")
+
+
 
 }
