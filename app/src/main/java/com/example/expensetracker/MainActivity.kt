@@ -29,7 +29,8 @@ import androidx.navigation.navArgument
 import androidx.room.Room
 
 class MainActivity : ComponentActivity() {
-    private lateinit var viewModel: RecordViewModel
+    private lateinit var recordViewModel: RecordViewModel
+    private lateinit var currencyViewModel: CurrencyViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,22 +39,26 @@ class MainActivity : ComponentActivity() {
         val database = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java,
-            "expense_tracker_db_v4"
+            "expense_tracker_db_v5"
         ).build()
 
         val repository = RecordRepository(database.recordDao())
         val factory = RecordViewModelFactory(repository)
-        viewModel = ViewModelProvider(this, factory)[RecordViewModel::class.java]
+        recordViewModel = ViewModelProvider(this, factory)[RecordViewModel::class.java]
+
+        val currencyRepository = CurrencyRepository(database.currencyDao())
+        val currencyViewModel = CurrencyViewModel(currencyRepository)
+        currencyViewModel.initializeCurrencies()
 
         setContent {
-            MyApp(viewModel = viewModel)
+            MyApp(recordViewModel = recordViewModel, currencyViewModel = currencyViewModel)
         }
     }
 }
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun MyApp(viewModel: RecordViewModel) {
+fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel) {
     val navController = rememberNavController()
     var selectedItem by remember { mutableIntStateOf(0) }
 
@@ -111,7 +116,7 @@ fun MyApp(viewModel: RecordViewModel) {
                 // Display different screens based on selected item
                 when (selectedItem) {
                     0 -> HomeScreen()
-                    1 -> RecordsScreen(viewModel = viewModel, navController = navController) // Pass viewModel here
+                    1 -> RecordsScreen(viewModel = recordViewModel, navController = navController) // Pass viewModel here
                     2 -> StarScreen()
                 }
             }
@@ -119,12 +124,12 @@ fun MyApp(viewModel: RecordViewModel) {
 
         // FAB screen (Create new record)
         composable("fabScreen") {
-            CreateRecordScreen(navController = navController, viewModel = viewModel)
+            CreateRecordScreen(navController = navController, recordViewModel = recordViewModel, currencyViewModel = currencyViewModel)
         }
 
         // Record screen (to display records from the db)
         composable("recordsScreen") {
-            RecordsScreen(viewModel = viewModel, navController = navController) // Pass viewModel here as well
+            RecordsScreen(viewModel = recordViewModel, navController = navController) // Pass viewModel here as well
         }
 
         composable(
@@ -134,13 +139,14 @@ fun MyApp(viewModel: RecordViewModel) {
             val recordId = backStackEntry.arguments?.getInt("recordId")
             recordId?.let {
                 // Fetch the record as a Flow
-                val recordFlow = viewModel.getRecordByIdFlow(it)
+                val recordFlow = recordViewModel.getRecordByIdFlow(it)
 
                 // Ensure parameter names match the function signature
                 EditRecordScreen(
                     navController = navController,
                     recordFlow = recordFlow, // Correct parameter name
-                    viewModel = viewModel
+                    viewModel = recordViewModel,
+                    currencyViewModel = currencyViewModel
                 )
             } ?: run {
                 // Handle null case (optional)

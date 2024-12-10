@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -109,16 +110,25 @@ private fun convertMillisToDayAndDateUTC(millis: Long): String {
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel) {
+fun CreateRecordScreen(
+    navController: NavController,
+    recordViewModel: RecordViewModel,
+    currencyViewModel: CurrencyViewModel
+) {
     var amount by remember { mutableStateOf("") }
-    var dateDisplay by remember { mutableStateOf("Pick a date") } // For display
-    var dateTimestamp by remember { mutableLongStateOf( 0 ) } // For database storage
+    var dateDisplay by remember { mutableStateOf("Pick a date") }
+    var dateTimestamp by remember { mutableLongStateOf(0) }
     var selectedCategory by remember { mutableStateOf("Food") }
     var isExpense by remember { mutableStateOf(true) }
     var description by remember { mutableStateOf("") }
-    var expanded by remember { mutableStateOf(false) }
+    var categoryExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var selectedCurrency by remember { mutableStateOf("USD") } // Default to USD
+    var currencyExpanded by remember { mutableStateOf(false) }
     val categories = listOf("Food", "Transport", "Rent", "Entertainment")
+
+    // Get the list of currencies from the view model
+    val currencies by currencyViewModel.currencies
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Add Record") }) }
@@ -131,13 +141,53 @@ fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel)
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                TextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("Amount") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp) // Add spacing between fields
+                ) {
+                    // Amount Field
+                    TextField(
+                        value = amount,
+                        onValueChange = { amount = it },
+                        label = { Text("Amount") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .weight(2f) // Adjust weight to control width proportion
+                    )
+
+                    // Currency Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = currencyExpanded,
+                        onExpandedChange = { currencyExpanded = !currencyExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        TextField(
+                            value = selectedCurrency,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Currency") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded)
+                            },
+                            modifier = Modifier.menuAnchor()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = currencyExpanded,
+                            onDismissRequest = { currencyExpanded = false },
+                            modifier = Modifier.width(300.dp) // Custom width for dropdown
+                        ) {
+                            currencies.forEach { currency ->
+                                DropdownMenuItem(
+                                    text = { Text("${currency.code} - ${currency.name}") },
+                                    onClick = {
+                                        selectedCurrency = currency.code
+                                        currencyExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             item {
@@ -146,15 +196,15 @@ fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel)
                         modifier = Modifier.fillMaxWidth(),
                         onClick = { showDatePicker = true }
                     ) {
-                        Text(text = dateDisplay) // Display the formatted date
+                        Text(text = dateDisplay)
                     }
                 }
 
                 if (showDatePicker) {
                     MyDatePickerDialog(
                         onDateSelected = { timestamp ->
-                            dateTimestamp = timestamp // Store timestamp for DB
-                            dateDisplay = convertMillisToDayAndDateUTC(timestamp) // Format for display
+                            dateTimestamp = timestamp
+                            dateDisplay = convertMillisToDayAndDateUTC(timestamp)
                         },
                         onDismiss = { showDatePicker = false }
                     )
@@ -190,8 +240,8 @@ fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel)
 
             item {
                 ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
+                    expanded = categoryExpanded,
+                    onExpandedChange = { categoryExpanded = !categoryExpanded }
                 ) {
                     TextField(
                         value = selectedCategory,
@@ -199,20 +249,20 @@ fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel)
                         readOnly = true,
                         label = { Text("Category") },
                         trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
                         },
                         modifier = Modifier.menuAnchor()
                     )
                     ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false }
                     ) {
                         categories.forEach { category ->
                             DropdownMenuItem(
                                 text = { Text(category) },
                                 onClick = {
                                     selectedCategory = category
-                                    expanded = false
+                                    categoryExpanded = false
                                 }
                             )
                         }
@@ -235,12 +285,13 @@ fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel)
                         // Save the record to the database
                         val record = Record(
                             amount = amount.toDoubleOrNull() ?: 0.0,
-                            date = dateTimestamp, // Use the timestamp for DB
+                            date = dateTimestamp,
                             isExpense = isExpense,
                             category = selectedCategory,
-                            description = description
+                            description = description,
+                            currency = selectedCurrency // Save currency code
                         )
-                        viewModel.saveRecord(record)
+                        recordViewModel.saveRecord(record)
 
                         // Navigate back to the previous screen
                         navController.popBackStack()
@@ -253,6 +304,7 @@ fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel)
         }
     }
 }
+
 
 @Composable
 fun RecordsScreen(viewModel: RecordViewModel, navController: NavController) {
@@ -338,7 +390,8 @@ fun RecordItem(record: Record, navController: NavController) {
 fun EditRecordScreen(
     navController: NavController,
     recordFlow: Flow<Record?>,
-    viewModel: RecordViewModel
+    viewModel: RecordViewModel,
+    currencyViewModel: CurrencyViewModel
 ) {
     // Collect the record from the Flow
     val record by recordFlow.collectAsState(initial = null)
@@ -352,8 +405,12 @@ fun EditRecordScreen(
         var isExpense by remember { mutableStateOf(currentRecord.isExpense) }
         var description by remember { mutableStateOf(currentRecord.description) }
         var expanded by remember { mutableStateOf(false) }
+        var selectedCurrency by remember { mutableStateOf(currentRecord.currency) }
+        var currencyExpanded by remember { mutableStateOf(false) }
         var showDatePicker by remember { mutableStateOf(false) }
         val categories = listOf("Food", "Transport", "Rent", "Entertainment")
+        // Get the list of currencies from the view model
+        val currencies by currencyViewModel.currencies
 
         Scaffold(
             topBar = {
@@ -380,16 +437,54 @@ fun EditRecordScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Amount field
                 item {
-                    TextField(
-                        value = amount,
-                        onValueChange = { amount = it },
-                        label = { Text("Amount") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        isError = amount.toDoubleOrNull() == null,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp) // Add spacing between fields
+                    ) {
+                        // Amount Field
+                        TextField(
+                            value = amount,
+                            onValueChange = { amount = it },
+                            label = { Text("Amount") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier
+                                .weight(2f) // Adjust weight to control width proportion
+                        )
+
+                        // Currency Dropdown
+                        ExposedDropdownMenuBox(
+                            expanded = currencyExpanded,
+                            onExpandedChange = { currencyExpanded = !currencyExpanded },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            TextField(
+                                value = selectedCurrency,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Currency") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded)
+                                },
+                                modifier = Modifier.menuAnchor()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = currencyExpanded,
+                                onDismissRequest = { currencyExpanded = false },
+                                modifier = Modifier.width(300.dp) // Custom width for dropdown
+                            ) {
+                                currencies.forEach { currency ->
+                                    DropdownMenuItem(
+                                        text = { Text("${currency.code} - ${currency.name}") },
+                                        onClick = {
+                                            selectedCurrency = currency.code
+                                            currencyExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 item {
@@ -494,7 +589,8 @@ fun EditRecordScreen(
                                 date = dateTimestamp,
                                 isExpense = isExpense,
                                 category = selectedCategory,
-                                description = description
+                                description = description,
+                                currency = selectedCurrency // Save currency code
                             )
                             viewModel.updateRecord(updatedRecord)
                             navController.popBackStack() // Go back to the previous screen
