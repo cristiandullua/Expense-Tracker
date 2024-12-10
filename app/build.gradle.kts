@@ -54,7 +54,7 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -63,7 +63,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation("androidx.compose.material3:material3:1.3.1")
+    implementation("androidx.compose.material3:material3:1.4.0-alpha02")
     implementation("androidx.compose.material3:material3-window-size-class:1.3.0")
     implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.4.0-alpha02")
 
@@ -97,4 +97,31 @@ dependencies {
 
     // optional - Paging 3 Integration
     implementation("androidx.room:room-paging:$roomVersion")
+
+    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    implementation ("androidx.lifecycle:lifecycle-livedata-ktx:2.6.1")
+    implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
+    implementation ("androidx.compose.runtime:runtime-livedata:1.4.0") // or the appropriate version
+
+    val work_version = "2.9.1"
+
+    // (Java only)
+    implementation ("androidx.work:work-runtime:$work_version")
+
+    // Kotlin + coroutines
+    implementation ("androidx.work:work-runtime-ktx:$work_version")
+
+    // optional - RxJava2 support
+    implementation ("androidx.work:work-rxjava2:$work_version")
+
+    // optional - GCMNetworkManager support
+    implementation ("androidx.work:work-gcm:$work_version")
+
+    // optional - Test helpers
+    androidTestImplementation ("androidx.work:work-testing:$work_version")
+
+    // optional - Multiprocess support
+    implementation ("androidx.work:work-multiprocess:$work_version")
 }

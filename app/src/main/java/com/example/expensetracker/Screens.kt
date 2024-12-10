@@ -29,13 +29,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
+import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,6 +51,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.flow.Flow
+import java.sql.Date
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 @Composable
 fun HomeScreen() {
@@ -57,28 +66,68 @@ fun StarScreen() {
     Text(text = "Star Screen")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MyDatePickerDialog(
+    onDateSelected: (Long) -> Unit, // Return timestamp instead of string
+    onDismiss: () -> Unit
+) {
+    val datePickerState = rememberDatePickerState(selectableDates = object : SelectableDates {
+        override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+            return utcTimeMillis <= System.currentTimeMillis()
+        }
+    })
+
+    DatePickerDialog(
+        onDismissRequest = { onDismiss() },
+        confirmButton = {
+            Button(onClick = {
+                val selectedMillis = datePickerState.selectedDateMillis
+                if (selectedMillis != null) {
+                    onDateSelected(selectedMillis) // Pass raw timestamp
+                }
+                onDismiss()
+            }) {
+                Text(text = "OK")
+            }
+        },
+        dismissButton = {
+            Button(onClick = { onDismiss() }) {
+                Text(text = "Cancel")
+            }
+        }
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+private fun convertMillisToDayAndDateUTC(millis: Long): String {
+    val formatter = SimpleDateFormat("EEEE - MMM dd, yyyy", Locale.getDefault())
+    formatter.timeZone = TimeZone.getTimeZone("UTC") // Set the time zone to UTC
+    return formatter.format(Date(millis))
+}
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel) {
     var amount by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf("") }
+    var dateDisplay by remember { mutableStateOf("Pick a date") } // For display
+    var dateTimestamp by remember { mutableLongStateOf( 0 ) } // For database storage
     var selectedCategory by remember { mutableStateOf("Food") }
     var isExpense by remember { mutableStateOf(true) }
     var description by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
-
+    var showDatePicker by remember { mutableStateOf(false) }
     val categories = listOf("Food", "Transport", "Rent", "Entertainment")
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Add Record") })
-        }
+        topBar = { TopAppBar(title = { Text("Add Record") }) }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding) // Ensures content is not obscured by the top bar
-                .padding(16.dp),       // Adds padding around the screen content
+                .padding(innerPadding)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -92,20 +141,29 @@ fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel)
             }
 
             item {
-                TextField(
-                    value = date,
-                    onValueChange = { date = it },
-                    label = { Text("Date") },
-                    placeholder = { Text("YYYY-MM-DD") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { showDatePicker = true }
+                    ) {
+                        Text(text = dateDisplay) // Display the formatted date
+                    }
+                }
+
+                if (showDatePicker) {
+                    MyDatePickerDialog(
+                        onDateSelected = { timestamp ->
+                            dateTimestamp = timestamp // Store timestamp for DB
+                            dateDisplay = convertMillisToDayAndDateUTC(timestamp) // Format for display
+                        },
+                        onDismiss = { showDatePicker = false }
+                    )
+                }
             }
 
             item {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(
@@ -177,7 +235,7 @@ fun CreateRecordScreen(navController: NavController, viewModel: RecordViewModel)
                         // Save the record to the database
                         val record = Record(
                             amount = amount.toDoubleOrNull() ?: 0.0,
-                            date = date,
+                            date = dateTimestamp, // Use the timestamp for DB
                             isExpense = isExpense,
                             category = selectedCategory,
                             description = description
@@ -288,12 +346,13 @@ fun EditRecordScreen(
     record?.let { currentRecord ->
         // State holders for form fields
         var amount by remember { mutableStateOf(currentRecord.amount.toString()) }
-        var date by remember { mutableStateOf(currentRecord.date) }
+        var dateDisplay by remember { mutableStateOf( convertMillisToDayAndDateUTC(currentRecord.date.toLong())) } // For display
+        var dateTimestamp by remember { mutableLongStateOf(currentRecord.date) } // For database storage
         var selectedCategory by remember { mutableStateOf(currentRecord.category) }
         var isExpense by remember { mutableStateOf(currentRecord.isExpense) }
         var description by remember { mutableStateOf(currentRecord.description) }
         var expanded by remember { mutableStateOf(false) }
-
+        var showDatePicker by remember { mutableStateOf(false) }
         val categories = listOf("Food", "Transport", "Rent", "Entertainment")
 
         Scaffold(
@@ -333,34 +392,55 @@ fun EditRecordScreen(
                     )
                 }
 
-                // Date field
                 item {
-                    TextField(
-                        value = date,
-                        onValueChange = { date = it },
-                        label = { Text("Date") },
-                        placeholder = { Text("YYYY-MM-DD") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { showDatePicker = true }
+                        ) {
+                            Text(text = dateDisplay) // Display the formatted date
+                        }
+                    }
+
+                    if (showDatePicker) {
+                        MyDatePickerDialog(
+                            onDateSelected = { timestamp ->
+                                dateTimestamp = timestamp // Store timestamp for DB
+                                dateDisplay = convertMillisToDayAndDateUTC(timestamp) // Format for display
+                            },
+                            onDismiss = { showDatePicker = false }
+                        )
+                    }
                 }
 
                 // Type toggle
                 item {
-                    Row(
+                    Box(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "Type:")
-                        Row {
-                            Text(text = "Expense")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Expense",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
                             Switch(
                                 checked = !isExpense,
                                 onCheckedChange = { isExpense = !it }
                             )
-                            Text(text = "Income")
+                            Text(
+                                text = "Income",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
                         }
                     }
                 }
+
 
                 // Category dropdown
                 item {
@@ -411,7 +491,7 @@ fun EditRecordScreen(
                         onClick = {
                             val updatedRecord = currentRecord.copy(
                                 amount = amount.toDoubleOrNull() ?: 0.0,
-                                date = date,
+                                date = dateTimestamp,
                                 isExpense = isExpense,
                                 category = selectedCategory,
                                 description = description
