@@ -9,7 +9,6 @@ data class Record(
     val amount: Double,
     val date: Long,
     val category: String,
-    val isExpense: Boolean,
     val description: String,
     val currency: String = "USD"
 )

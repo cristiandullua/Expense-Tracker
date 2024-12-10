@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
         val database = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java,
-            "expense_tracker_db_v5"
+            "expense_tracker_db_v6"
         ).build()
 
         val repository = RecordRepository(database.recordDao())

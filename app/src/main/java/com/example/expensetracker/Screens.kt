@@ -47,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,6 +57,7 @@ import java.sql.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.absoluteValue
 
 @Composable
 fun HomeScreen() {
@@ -119,12 +121,12 @@ fun CreateRecordScreen(
     var dateDisplay by remember { mutableStateOf("Pick a date") }
     var dateTimestamp by remember { mutableLongStateOf(0) }
     var selectedCategory by remember { mutableStateOf("Food") }
-    var isExpense by remember { mutableStateOf(true) }
     var description by remember { mutableStateOf("") }
     var categoryExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var selectedCurrency by remember { mutableStateOf("USD") } // Default to USD
     var currencyExpanded by remember { mutableStateOf(false) }
+    var isIncome by remember { mutableStateOf(false) } // Track if it's an expense or income
     val categories = listOf("Food", "Transport", "Rent", "Entertainment")
 
     // Get the list of currencies from the view model
@@ -148,7 +150,12 @@ fun CreateRecordScreen(
                     // Amount Field
                     TextField(
                         value = amount,
-                        onValueChange = { amount = it },
+                        onValueChange = {
+                            // Allow only valid numeric input
+                            if (it.all { char -> char.isDigit() || char == '.' }) {
+                                amount = it
+                            }
+                        },
                         label = { Text("Amount") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier
@@ -226,8 +233,10 @@ fun CreateRecordScreen(
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Switch(
-                            checked = !isExpense,
-                            onCheckedChange = { isExpense = !it }
+                            checked = isIncome,
+                            onCheckedChange = { checked ->
+                                isIncome = checked
+                            }
                         )
                         Text(
                             text = "Income",
@@ -282,11 +291,12 @@ fun CreateRecordScreen(
             item {
                 Button(
                     onClick = {
+                        val recordAmount = amount.toDoubleOrNull() ?: 0.0
+
                         // Save the record to the database
                         val record = Record(
-                            amount = amount.toDoubleOrNull() ?: 0.0,
+                            amount = if (isIncome) recordAmount else -recordAmount, // Convert based on switch
                             date = dateTimestamp,
-                            isExpense = isExpense,
                             category = selectedCategory,
                             description = description,
                             currency = selectedCurrency // Save currency code
@@ -305,86 +315,6 @@ fun CreateRecordScreen(
     }
 }
 
-
-@Composable
-fun RecordsScreen(viewModel: RecordViewModel, navController: NavController) {
-    // Collecting records as a state
-    val records by viewModel.allRecords.collectAsState(initial = emptyList())
-
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Records") })
-        }
-    ) { innerPadding ->
-        if (records.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No records found.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(records) { record ->
-                    RecordItem(record, navController)  // Pass ViewModel and NavController
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun RecordItem(record: Record, navController: NavController) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .clickable {
-                // Navigate to the EditRecordScreen when the record is clicked
-                navController.navigate("editRecordScreen/${record.id}")
-            },
-        elevation = CardDefaults.elevatedCardElevation()
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically // Center content vertically
-        ) {
-            // Left Column for category, date, and description
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 16.dp)
-            ) {
-                // Category
-                Text("Category: ${record.category}", style = MaterialTheme.typography.bodyMedium)
-                // Date
-                Text("Date: ${record.date}", style = MaterialTheme.typography.bodySmall)
-                // Description
-                Text("Description: ${record.description}", style = MaterialTheme.typography.bodySmall)
-            }
-
-            // Right Column for amount (larger font size)
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .wrapContentWidth(Alignment.End) // Aligns the amount to the right
-            ) {
-                Text(
-                    text = "${record.amount}",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp) // Adjust size as needed
-                )
-            }
-        }
-    }
-}
-
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun EditRecordScreen(
@@ -398,11 +328,10 @@ fun EditRecordScreen(
 
     record?.let { currentRecord ->
         // State holders for form fields
-        var amount by remember { mutableStateOf(currentRecord.amount.toString()) }
-        var dateDisplay by remember { mutableStateOf( convertMillisToDayAndDateUTC(currentRecord.date.toLong())) } // For display
+        var amount by remember { mutableStateOf(currentRecord.amount.absoluteValue.toString()) } // Show absolute value
+        var dateDisplay by remember { mutableStateOf(convertMillisToDayAndDateUTC(currentRecord.date.toLong())) } // For display
         var dateTimestamp by remember { mutableLongStateOf(currentRecord.date) } // For database storage
         var selectedCategory by remember { mutableStateOf(currentRecord.category) }
-        var isExpense by remember { mutableStateOf(currentRecord.isExpense) }
         var description by remember { mutableStateOf(currentRecord.description) }
         var expanded by remember { mutableStateOf(false) }
         var selectedCurrency by remember { mutableStateOf(currentRecord.currency) }
@@ -411,6 +340,9 @@ fun EditRecordScreen(
         val categories = listOf("Food", "Transport", "Rent", "Entertainment")
         // Get the list of currencies from the view model
         val currencies by currencyViewModel.currencies
+
+        // Determine the switch state based on the amount
+        var isIncome by remember { mutableStateOf(currentRecord.amount > 0) }
 
         Scaffold(
             topBar = {
@@ -445,7 +377,12 @@ fun EditRecordScreen(
                         // Amount Field
                         TextField(
                             value = amount,
-                            onValueChange = { amount = it },
+                            onValueChange = {
+                                // Allow only valid numeric input
+                                if (it.all { char -> char.isDigit() || char == '.' }) {
+                                    amount = it
+                                }
+                            },
                             label = { Text("Amount") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier
@@ -524,8 +461,10 @@ fun EditRecordScreen(
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                             Switch(
-                                checked = !isExpense,
-                                onCheckedChange = { isExpense = !it }
+                                checked = isIncome,
+                                onCheckedChange = { checked ->
+                                    isIncome = checked
+                                }
                             )
                             Text(
                                 text = "Income",
@@ -535,7 +474,6 @@ fun EditRecordScreen(
                         }
                     }
                 }
-
 
                 // Category dropdown
                 item {
@@ -582,12 +520,13 @@ fun EditRecordScreen(
 
                 // Save record button
                 item {
+                    val recordAmount = amount.toDoubleOrNull() ?: 0.0
+
                     Button(
                         onClick = {
                             val updatedRecord = currentRecord.copy(
-                                amount = amount.toDoubleOrNull() ?: 0.0,
+                                amount = if (isIncome) recordAmount else -recordAmount, // Convert based on switch
                                 date = dateTimestamp,
-                                isExpense = isExpense,
                                 category = selectedCategory,
                                 description = description,
                                 currency = selectedCurrency // Save currency code
@@ -606,6 +545,96 @@ fun EditRecordScreen(
         // Show loading state while the record is being fetched
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
+        }
+    }
+}
+
+@Composable
+fun RecordsScreen(viewModel: RecordViewModel, navController: NavController) {
+    // Collecting records as a state
+    val records by viewModel.allRecords.collectAsState(initial = emptyList())
+
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Records") })
+        }
+    ) { innerPadding ->
+        if (records.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No records found.")
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(records) { record ->
+                    RecordItem(record, navController)  // Pass ViewModel and NavController
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RecordItem(record: Record, navController: NavController) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .clickable {
+                // Navigate to the EditRecordScreen when the record is clicked
+                navController.navigate("editRecordScreen/${record.id}")
+            },
+        elevation = CardDefaults.elevatedCardElevation(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left Column for category and description
+            Column(
+                modifier = Modifier
+                    .weight(3f)
+                    .padding(end = 16.dp)
+            ) {
+                // Category
+                Text(
+                    text = record.category,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                // Description
+                if (record.description.isNotEmpty()) {
+                    Text(
+                        text = record.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            // Right Column for amount and currency
+            Column(
+                modifier = Modifier
+                    .weight(2f)
+                    .wrapContentWidth(Alignment.End),
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = "${record.amount} ${record.currency}",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
         }
     }
 }
