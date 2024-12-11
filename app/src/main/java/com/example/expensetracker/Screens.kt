@@ -208,6 +208,20 @@ private fun convertMillisToDayAndDateUTC(millis: Long): String {
     return formatter.format(Date(millis))
 }
 
+private fun convertMillisToDatabaseFormat(millis: Long): String {
+    val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    // Set the time zone to UTC to avoid issues with local time zone offsets
+    formatter.timeZone = TimeZone.getTimeZone("UTC")
+    return formatter.format(Date(millis))
+}
+
+fun convertDateToTimestamp(dateString: String): Long {
+    // Parse the string (YYYY-MM-DD) into a LocalDate and convert to timestamp (milliseconds)
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val date = dateFormat.parse(dateString)
+    return date?.time ?: 0L
+}
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun CreateRecordScreen(
@@ -332,9 +346,7 @@ fun CreateRecordScreen(
                         )
                         Switch(
                             checked = isIncome,
-                            onCheckedChange = { checked ->
-                                isIncome = checked
-                            }
+                            onCheckedChange = { checked -> isIncome = checked }
                         )
                         Text(
                             text = "Income",
@@ -394,7 +406,7 @@ fun CreateRecordScreen(
                         // Save the record to the database
                         val record = Record(
                             amount = if (isIncome) recordAmount else -recordAmount, // Convert based on switch
-                            date = dateTimestamp,
+                            date = convertMillisToDatabaseFormat(dateTimestamp), // Store date in YYYY-MM-DD format
                             category = selectedCategory,
                             description = description,
                             currency = selectedCurrency // Save currency code
@@ -427,8 +439,8 @@ fun EditRecordScreen(
     record?.let { currentRecord ->
         // State holders for form fields
         var amount by remember { mutableStateOf(currentRecord.amount.absoluteValue.toString()) } // Show absolute value
-        var dateDisplay by remember { mutableStateOf(convertMillisToDayAndDateUTC(currentRecord.date.toLong())) } // For display
-        var dateTimestamp by remember { mutableLongStateOf(currentRecord.date) } // For database storage
+        var dateDisplay by remember { mutableStateOf(convertMillisToDayAndDateUTC(convertDateToTimestamp(currentRecord.date))) } // For display
+        var dateTimestamp by remember { mutableLongStateOf(convertDateToTimestamp(currentRecord.date)) } // For database storage
         var selectedCategory by remember { mutableStateOf(currentRecord.category) }
         var description by remember { mutableStateOf(currentRecord.description) }
         var expanded by remember { mutableStateOf(false) }
@@ -624,7 +636,7 @@ fun EditRecordScreen(
                         onClick = {
                             val updatedRecord = currentRecord.copy(
                                 amount = if (isIncome) recordAmount else -recordAmount, // Convert based on switch
-                                date = dateTimestamp,
+                                date = convertMillisToDatabaseFormat(dateTimestamp), // Store date in YYYY-MM-DD format
                                 category = selectedCategory,
                                 description = description,
                                 currency = selectedCurrency // Save currency code

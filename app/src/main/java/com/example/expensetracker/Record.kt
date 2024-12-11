@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class Record(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val amount: Double,
-    val date: Long,
+    val date: String,
     val category: String,
     val description: String,
     val currency: String = "USD"
