@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
@@ -48,8 +50,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.flow.Flow
@@ -65,8 +70,101 @@ fun HomeScreen() {
 }
 
 @Composable
-fun StarScreen() {
-    Text(text = "Star Screen")
+fun SettingsScreen(navController: NavController, currencyViewModel: CurrencyViewModel) {
+    var currencyExpanded by remember { mutableStateOf(false) }
+    val displayInBaseCurrency by currencyViewModel.displayInBaseCurrency
+    val currencies by currencyViewModel.currencies
+    val baseCurrencyCode by currencyViewModel.baseCurrency
+    val baseCurrencyName = currencies.find { it.code == baseCurrencyCode }?.name ?: "Unknown"
+
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Settings") }) }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Currency Dropdown
+            ExposedDropdownMenuBox(
+                expanded = currencyExpanded,
+                onExpandedChange = { currencyExpanded = !currencyExpanded },
+                modifier = Modifier.fillMaxWidth() // Ensure full-width dropdown
+            ) {
+                TextField(
+                    value = baseCurrencyCode,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Select Currency") }, // Updated label
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded)
+                    },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth() // Ensure consistent width
+                )
+                ExposedDropdownMenu(
+                    expanded = currencyExpanded,
+                    onDismissRequest = { currencyExpanded = false },
+                    modifier = Modifier.fillMaxWidth() // Ensure consistent width
+                ) {
+                    currencies.forEach { currency ->
+                        DropdownMenuItem(
+                            text = { Text("${currency.code} - ${currency.name}") },
+                            onClick = {
+                                currencyViewModel.setBaseCurrency(currency.code)
+                                currencyExpanded = false
+                            },
+                            modifier = Modifier.fillMaxWidth() // Ensure consistent width
+                        )
+                    }
+                }
+            }
+
+// Display selected currency name below dropdown
+            Text(
+                text = buildAnnotatedString {
+                    append("Selected Currency: ")
+                    // Apply bold only to the currency name
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(baseCurrencyName) // Make only the currency name bold
+                    }
+                },
+                style = MaterialTheme.typography.bodyMedium // Apply the default body style for the entire text
+            )
+
+
+            // Divider between sections
+            Divider(modifier = Modifier.fillMaxWidth())
+
+            // Toggle for Displaying Records in Base Currency
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Display Records in Base Currency",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+// In your SettingsScreen composable, inside the Switch onCheckedChange:
+                Switch(
+                    checked = displayInBaseCurrency,
+                    onCheckedChange = { newState ->
+                        currencyViewModel.setDisplayInBaseCurrency(newState) // Update ViewModel state
+                    }
+                )
+            }
+
+            // Short explanation for the switch
+            Text(
+                text = "When active, all amounts will be displayed in the base currency.",
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -664,7 +762,7 @@ fun Header(title: String, onMenuClick: () -> Unit) {
     TopAppBar(
         title = { Text(title) },
         actions = {
-            DropdownMenuButton(onMenuClick)
+
         }
     )
 }

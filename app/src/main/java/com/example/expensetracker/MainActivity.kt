@@ -10,12 +10,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Payments
-import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -62,9 +61,9 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
     val navController = rememberNavController()
     var selectedItem by remember { mutableIntStateOf(0) }
 
-    val items = listOf("Home", "Records", "Star")
-    val selectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Payments, Icons.Filled.Star)
-    val unselectedIcons = listOf(Icons.Outlined.Home, Icons.Outlined.Payments, Icons.Outlined.StarBorder)
+    val items = listOf("Home", "Records", "Settings")
+    val selectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Payments, Icons.Filled.Settings)
+    val unselectedIcons = listOf(Icons.Outlined.Home, Icons.Outlined.Payments, Icons.Outlined.Settings)
 
     // Navigation Host
     NavHost(navController = navController, startDestination = "mainScreen") {
@@ -72,12 +71,12 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
         composable("mainScreen") {
             Scaffold(
                 topBar = {
-                    if (selectedItem in listOf(0, 1, 2)) { // Show header only for Home, Records, and Star
+                    if (selectedItem in listOf(0, 1, 2)) { // Show header only for Home, Records, and Settings
                         Header(
                             title = when (selectedItem) {
                                 0 -> "Home"
                                 1 -> "Records"
-                                2 -> "Star"
+                                2 -> "Settings"
                                 else -> ""
                             },
                             onMenuClick = { /* TODO: Handle menu actions */ }
@@ -117,7 +116,7 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
                 when (selectedItem) {
                     0 -> HomeScreen()
                     1 -> RecordsScreen(viewModel = recordViewModel, navController = navController) // Pass viewModel here
-                    2 -> StarScreen()
+                    2 -> SettingsScreen(navController = navController, currencyViewModel = currencyViewModel) // Pass navController for consistency
                 }
             }
         }
@@ -132,6 +131,11 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
             RecordsScreen(viewModel = recordViewModel, navController = navController) // Pass viewModel here as well
         }
 
+        // Settings screen (newly added)
+        composable("settingsScreen") {
+            SettingsScreen(navController, currencyViewModel)
+        }
+
         composable(
             "editRecordScreen/{recordId}",
             arguments = listOf(navArgument("recordId") { type = NavType.IntType })
@@ -141,7 +145,6 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
                 // Fetch the record as a Flow
                 val recordFlow = recordViewModel.getRecordByIdFlow(it)
 
-                // Ensure parameter names match the function signature
                 EditRecordScreen(
                     navController = navController,
                     recordFlow = recordFlow, // Correct parameter name
@@ -153,33 +156,6 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
                 Text("Invalid record ID.", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center)
             }
         }
-    }
-}
-
-@Composable
-fun DropdownMenuButton(onMenuClick: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-
-    IconButton(onClick = { expanded = !expanded }) {
-        Icon(Icons.Filled.MoreVert, contentDescription = "Menu")
-    }
-
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false }
-    ) {
-        DropdownMenuItem(
-            text = { Text("Option 1") },
-            onClick = { onMenuClick() }
-        )
-        DropdownMenuItem(
-            text = { Text("Option 2") },
-            onClick = { onMenuClick() }
-        )
-        DropdownMenuItem(
-            text = { Text("Option 3") },
-            onClick = { onMenuClick() }
-        )
     }
 }
 
