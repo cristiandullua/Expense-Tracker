@@ -13,7 +13,7 @@ class RecordRepository(private val recordDao: RecordDao) {
     }
 
     // Update an existing record
-    suspend fun updateRecord(record: Record) {
+    suspend fun update(record: Record) {
         recordDao.update(record)
     }
 

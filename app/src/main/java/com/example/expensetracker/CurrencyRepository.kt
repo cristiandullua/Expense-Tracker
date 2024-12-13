@@ -2,14 +2,18 @@ package com.example.expensetracker
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlinx.coroutines.flow.first
 
-class CurrencyRepository(private val currencyDao: CurrencyDao) {
+class CurrencyRepository(private val currencyDao: CurrencyDao, private val recordDao: RecordDao) {
 
     private val apiUrl = "https://openexchangerates.org/api/currencies.json"
+    private val historicalApiUrl = "https://openexchangerates.org/api/historical/"  // For historical rates
+    private val apiKey = "a3490f78e0174ea5bd4474f37027869d" // Your Open Exchange Rates API key
 
     suspend fun fetchAndStoreCurrencies() {
         val count = currencyDao.getCount()
@@ -50,5 +54,33 @@ class CurrencyRepository(private val currencyDao: CurrencyDao) {
     // Fetch all currencies from the database
     suspend fun getAllCurrencies(): List<Currency> {
         return currencyDao.getAllCurrencies()
+    }
+
+    // Fetch historical exchange rate for a specific date
+    suspend fun getHistoricalRate(date: String, fromCurrency: String, toCurrency: String): Double? {
+        val url = URL("$historicalApiUrl$date.json?app_id=$apiKey&base=$toCurrency&symbols=$fromCurrency")
+        return withContext(Dispatchers.IO) {
+            try {
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+
+                val inputStream = connection.inputStream
+                val response = inputStream.bufferedReader().use { it.readText() }
+
+                val jsonResponse = JSONObject(response)
+                val rates = jsonResponse.getJSONObject("rates")
+
+                // Ensure the key exists and fetch the value as Double
+                if (rates.has(fromCurrency)) {
+                    rates.getDouble(fromCurrency)
+                } else {
+                    Log.e("CurrencyRepository", "Key $toCurrency not found in rates")
+                    null
+                }
+            } catch (e: Exception) {
+                Log.e("CurrencyRepository", "Error fetching historical rates: ${e.message}")
+                null
+            }
+        }
     }
 }

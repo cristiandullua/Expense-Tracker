@@ -10,5 +10,6 @@ data class Record(
     val date: String,
     val category: String,
     val description: String,
-    val currency: String = "USD"
+    val currency: String = "USD",
+    val convertedAmount: Double = 0.0 // Default to 0.0
 )

@@ -114,7 +114,7 @@ fun SettingsScreen(navController: NavController, currencyViewModel: CurrencyView
                         DropdownMenuItem(
                             text = { Text("${currency.code} - ${currency.name}") },
                             onClick = {
-                                currencyViewModel.setBaseCurrency(currency.code)
+                                currencyViewModel.setBaseCurrency(currency.code) // Triggering the update
                                 currencyExpanded = false
                             },
                             modifier = Modifier.fillMaxWidth() // Ensure consistent width
@@ -153,7 +153,7 @@ fun SettingsScreen(navController: NavController, currencyViewModel: CurrencyView
                 Switch(
                     checked = displayInBaseCurrency,
                     onCheckedChange = { newState ->
-                        currencyViewModel.setDisplayInBaseCurrency(newState) // Update ViewModel state
+                        currencyViewModel.setDisplayInBaseCurrency(newState) // Triggering the update
                     }
                 )
             }
@@ -660,9 +660,14 @@ fun EditRecordScreen(
 }
 
 @Composable
-fun RecordsScreen(viewModel: RecordViewModel, navController: NavController) {
-    // Collecting records as a state
-    val records by viewModel.allRecords.collectAsState(initial = emptyList())
+fun RecordsScreen(
+    recordViewModel: RecordViewModel,
+    currencyViewModel: CurrencyViewModel,
+    navController: NavController
+) {
+    val records by recordViewModel.allRecords.collectAsState(initial = emptyList())
+    val baseCurrency by currencyViewModel.baseCurrency // Base currency state
+    val displayInBaseCurrency by currencyViewModel.displayInBaseCurrency // Display flag
 
     Scaffold(
         topBar = {
@@ -686,7 +691,12 @@ fun RecordsScreen(viewModel: RecordViewModel, navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(records) { record ->
-                    RecordItem(record, navController)  // Pass ViewModel and NavController
+                    RecordItem(
+                        record = record,
+                        navController = navController,
+                        displayInBaseCurrency = displayInBaseCurrency,
+                        baseCurrencySymbol = baseCurrency
+                    )
                 }
             }
         }
@@ -694,13 +704,17 @@ fun RecordsScreen(viewModel: RecordViewModel, navController: NavController) {
 }
 
 @Composable
-fun RecordItem(record: Record, navController: NavController) {
+fun RecordItem(
+    record: Record,
+    navController: NavController,
+    displayInBaseCurrency: Boolean,
+    baseCurrencySymbol: String
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
             .clickable {
-                // Navigate to the EditRecordScreen when the record is clicked
                 navController.navigate("editRecordScreen/${record.id}")
             },
         elevation = CardDefaults.elevatedCardElevation(),
@@ -716,13 +730,11 @@ fun RecordItem(record: Record, navController: NavController) {
                     .weight(3f)
                     .padding(end = 16.dp)
             ) {
-                // Category
                 Text(
                     text = record.category,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
-                // Description
                 if (record.description.isNotEmpty()) {
                     Text(
                         text = record.description,
@@ -739,24 +751,23 @@ fun RecordItem(record: Record, navController: NavController) {
                     .wrapContentWidth(Alignment.End),
                 horizontalAlignment = Alignment.End
             ) {
-                // Row to display amount and currency side by side
                 Row(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Amount with bold style
+                    val amountToDisplay = if (displayInBaseCurrency) record.convertedAmount else record.amount
+                    val currencyToDisplay = if (displayInBaseCurrency) baseCurrencySymbol else record.currency
+
                     Text(
-                        text = "${record.amount}",
+                        text = "$amountToDisplay",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     )
-                    // Space between amount and currency
                     Spacer(modifier = Modifier.width(4.dp))
-                    // Currency with light style
                     Text(
-                        text = record.currency,
+                        text = currencyToDisplay,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Light,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -767,7 +778,6 @@ fun RecordItem(record: Record, navController: NavController) {
         }
     }
 }
-
 
 @Composable
 fun Header(title: String, onMenuClick: () -> Unit) {

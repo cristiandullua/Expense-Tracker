@@ -38,15 +38,15 @@ class MainActivity : ComponentActivity() {
         val database = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java,
-            "expense_tracker_db_v8"
+            "expense_tracker_db_v9"
         ).build()
 
         val repository = RecordRepository(database.recordDao())
         val factory = RecordViewModelFactory(repository)
         recordViewModel = ViewModelProvider(this, factory)[RecordViewModel::class.java]
 
-        val currencyRepository = CurrencyRepository(database.currencyDao())
-        val currencyViewModel = CurrencyViewModel(currencyRepository)
+        val currencyRepository = CurrencyRepository(database.currencyDao(), database.recordDao())
+        val currencyViewModel = CurrencyViewModel(currencyRepository, repository)
         currencyViewModel.initializeCurrencies()
 
         setContent {
@@ -115,7 +115,7 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
                 // Display different screens based on selected item
                 when (selectedItem) {
                     0 -> HomeScreen()
-                    1 -> RecordsScreen(viewModel = recordViewModel, navController = navController) // Pass viewModel here
+                    1 -> RecordsScreen(recordViewModel = recordViewModel, currencyViewModel = currencyViewModel, navController = navController) // Pass viewModel here
                     2 -> SettingsScreen(navController = navController, currencyViewModel = currencyViewModel) // Pass navController for consistency
                 }
             }
@@ -128,7 +128,7 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
 
         // Record screen (to display records from the db)
         composable("recordsScreen") {
-            RecordsScreen(viewModel = recordViewModel, navController = navController) // Pass viewModel here as well
+            RecordsScreen(recordViewModel = recordViewModel, currencyViewModel = currencyViewModel, navController = navController) // Pass viewModel here as well
         }
 
         // Settings screen (newly added)

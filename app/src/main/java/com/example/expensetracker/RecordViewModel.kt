@@ -28,7 +28,7 @@ class RecordViewModel(private val repository: RecordRepository) : ViewModel() {
     // Function to update an existing record
     fun updateRecord(record: Record) {
         viewModelScope.launch {
-            repository.updateRecord(record)
+            repository.update(record)
         }
     }
 
