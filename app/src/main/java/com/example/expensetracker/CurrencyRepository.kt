@@ -2,14 +2,12 @@ package com.example.expensetracker
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import kotlinx.coroutines.flow.first
 
-class CurrencyRepository(private val currencyDao: CurrencyDao, private val recordDao: RecordDao) {
+class CurrencyRepository(private val currencyDao: CurrencyDao) {
 
     private val apiUrl = "https://openexchangerates.org/api/currencies.json"
     private val historicalApiUrl = "https://openexchangerates.org/api/historical/"  // For historical rates

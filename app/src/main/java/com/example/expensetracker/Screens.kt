@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
@@ -36,6 +35,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Switch
@@ -71,7 +72,7 @@ fun HomeScreen() {
 }
 
 @Composable
-fun SettingsScreen(navController: NavController, currencyViewModel: CurrencyViewModel) {
+fun SettingsScreen(currencyViewModel: CurrencyViewModel) {
     var currencyExpanded by remember { mutableStateOf(false) }
     val displayInBaseCurrency by currencyViewModel.displayInBaseCurrency
     val currencies by currencyViewModel.currencies
@@ -103,7 +104,10 @@ fun SettingsScreen(navController: NavController, currencyViewModel: CurrencyView
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded)
                     },
                     modifier = Modifier
-                        .menuAnchor()
+                        .menuAnchor(
+                            type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, // Anchors the menu to the bottom of the TextField
+                            enabled = true // Enable the anchor functionality
+                        )
                         .fillMaxWidth() // Ensure consistent width
                 )
                 ExposedDropdownMenu(
@@ -138,7 +142,7 @@ fun SettingsScreen(navController: NavController, currencyViewModel: CurrencyView
 
 
             // Divider between sections
-            Divider(modifier = Modifier.fillMaxWidth())
+            HorizontalDivider(modifier = Modifier.fillMaxWidth())
 
             // Toggle for Displaying Records in Base Currency
             Row(
@@ -292,7 +296,10 @@ fun CreateRecordScreen(
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded)
                             },
-                            modifier = Modifier.menuAnchor()
+                            modifier = Modifier.menuAnchor(
+                                type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, // Anchors the menu to the bottom of the TextField
+                                enabled = true // Enable the anchor functionality
+                            )
                         )
                         ExposedDropdownMenu(
                             expanded = currencyExpanded,
@@ -374,7 +381,10 @@ fun CreateRecordScreen(
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
                         },
-                        modifier = Modifier.menuAnchor()
+                        modifier = Modifier.menuAnchor(
+                            type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, // Anchors the menu to the bottom of the TextField
+                            enabled = true // Enable the anchor functionality
+                        )
                     )
                     ExposedDropdownMenu(
                         expanded = categoryExpanded,
@@ -540,7 +550,10 @@ fun EditRecordScreen(
                                 trailingIcon = {
                                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded)
                                 },
-                                modifier = Modifier.menuAnchor()
+                                modifier = Modifier.menuAnchor(
+                                    type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, // Anchors the menu to the bottom of the TextField
+                                    enabled = true // Enable the anchor functionality
+                                )
                             )
                             ExposedDropdownMenu(
                                 expanded = currencyExpanded,
@@ -626,7 +639,10 @@ fun EditRecordScreen(
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             },
-                            modifier = Modifier.menuAnchor()
+                            modifier = Modifier.menuAnchor(
+                                type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, // Anchors the menu to the bottom of the TextField
+                                enabled = true // Enable the anchor functionality
+                            )
                         )
                         ExposedDropdownMenu(
                             expanded = expanded,
@@ -698,7 +714,6 @@ fun EditRecordScreen(
                     }
                 }
             }
-
         }
     } ?: run {
         // Show loading state while the record is being fetched
@@ -855,7 +870,7 @@ fun RecordItem(
 }
 
 @Composable
-fun Header(title: String, onMenuClick: () -> Unit) {
+fun Header(title: String) {
     TopAppBar(
         title = { Text(title) },
         actions = {

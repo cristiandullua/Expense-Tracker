@@ -1,14 +1,11 @@
 package com.example.expensetracker
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class CurrencyViewModel(
     private val currencyRepository: CurrencyRepository,
@@ -59,11 +56,6 @@ class CurrencyViewModel(
             currencyRepository.fetchAndStoreCurrencies()
             loadCurrenciesFromDatabase() // Reload after fetching
         }
-    }
-
-    // Get a currency by code
-    fun getCurrencyByCode(code: String): Currency? {
-        return _currencies.value.find { it.code == code }
     }
 
     // Update records with converted amounts

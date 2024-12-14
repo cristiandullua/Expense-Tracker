@@ -63,68 +63,61 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation("androidx.compose.material3:material3:1.4.0-alpha02")
-    implementation("androidx.compose.material3:material3-window-size-class:1.3.0")
-    implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.4.0-alpha02")
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.material3.windowsizeclass)
+    implementation(libs.androidx.material3.adaptive.navigation.suite)
 
-    implementation("androidx.compose.material:material:1.7.4")
-    implementation("androidx.compose.material:material-icons-extended:1.7.4")
+    implementation(libs.androidx.material)
+    implementation(libs.androidx.material.icons.extended)
 
-    val navVersion = "2.8.3"
-    implementation("androidx.navigation:navigation-compose:$navVersion")
+    implementation(libs.androidx.navigation.compose)
 
     val roomVersion = "2.6.1"
 
-    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation(libs.androidx.room.runtime)
     annotationProcessor("androidx.room:room-compiler:$roomVersion")
-
     ksp("androidx.room:room-compiler:$roomVersion")
 
     // optional - Kotlin Extensions and Coroutines support for Room
-    implementation("androidx.room:room-ktx:$roomVersion")
+    implementation(libs.androidx.room.ktx)
 
     // optional - RxJava2 support for Room
-    implementation("androidx.room:room-rxjava2:$roomVersion")
+    implementation(libs.androidx.room.rxjava2)
 
     // optional - RxJava3 support for Room
-    implementation("androidx.room:room-rxjava3:$roomVersion")
+    implementation(libs.androidx.room.rxjava3)
 
     // optional - Guava support for Room, including Optional and ListenableFuture
-    implementation("androidx.room:room-guava:$roomVersion")
+    implementation(libs.androidx.room.guava)
 
     // optional - Test helpers
-    testImplementation("androidx.room:room-testing:$roomVersion")
+    testImplementation(libs.androidx.room.testing)
 
     // optional - Paging 3 Integration
-    implementation("androidx.room:room-paging:$roomVersion")
+    implementation(libs.androidx.room.paging)
 
-    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation (libs.retrofit)
+    implementation (libs.converter.gson)
 
-    implementation ("androidx.lifecycle:lifecycle-livedata-ktx:2.6.1")
-    implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
-    implementation ("androidx.compose.runtime:runtime-livedata:1.4.0") // or the appropriate version
-
-    val work_version = "2.9.1"
+    implementation (libs.androidx.lifecycle.livedata.ktx)
+    implementation (libs.androidx.lifecycle.viewmodel.ktx)
+    implementation (libs.androidx.runtime.livedata) // or the appropriate version
 
     // (Java only)
-    implementation ("androidx.work:work-runtime:$work_version")
+    implementation (libs.androidx.work.runtime)
 
     // Kotlin + coroutines
-    implementation ("androidx.work:work-runtime-ktx:$work_version")
+    implementation (libs.androidx.work.runtime.ktx)
 
     // optional - RxJava2 support
-    implementation ("androidx.work:work-rxjava2:$work_version")
+    implementation (libs.androidx.work.rxjava2)
 
     // optional - GCMNetworkManager support
-    implementation ("androidx.work:work-gcm:$work_version")
+    implementation (libs.androidx.work.gcm)
 
     // optional - Test helpers
-    androidTestImplementation ("androidx.work:work-testing:$work_version")
+    androidTestImplementation (libs.androidx.work.testing)
 
     // optional - Multiprocess support
-    implementation ("androidx.work:work-multiprocess:$work_version")
-
-    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation (libs.androidx.work.multiprocess)
 }

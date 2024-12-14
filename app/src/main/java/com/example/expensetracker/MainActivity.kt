@@ -29,7 +29,6 @@ import androidx.room.Room
 
 class MainActivity : ComponentActivity() {
     private lateinit var recordViewModel: RecordViewModel
-    private lateinit var currencyViewModel: CurrencyViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +44,7 @@ class MainActivity : ComponentActivity() {
         val factory = RecordViewModelFactory(repository)
         recordViewModel = ViewModelProvider(this, factory)[RecordViewModel::class.java]
 
-        val currencyRepository = CurrencyRepository(database.currencyDao(), database.recordDao())
+        val currencyRepository = CurrencyRepository(database.currencyDao())
         val currencyViewModel = CurrencyViewModel(currencyRepository, repository)
         currencyViewModel.initializeCurrencies()
 
@@ -78,8 +77,7 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
                                 1 -> "Records"
                                 2 -> "Settings"
                                 else -> ""
-                            },
-                            onMenuClick = { /* TODO: Handle menu actions */ }
+                            }
                         )
                     }
                 },
@@ -116,7 +114,7 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
                 when (selectedItem) {
                     0 -> HomeScreen()
                     1 -> RecordsScreen(recordViewModel = recordViewModel, currencyViewModel = currencyViewModel, navController = navController) // Pass viewModel here
-                    2 -> SettingsScreen(navController = navController, currencyViewModel = currencyViewModel) // Pass navController for consistency
+                    2 -> SettingsScreen(currencyViewModel = currencyViewModel) // Pass navController for consistency
                 }
             }
         }
@@ -133,7 +131,7 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
 
         // Settings screen (newly added)
         composable("settingsScreen") {
-            SettingsScreen(navController, currencyViewModel)
+            SettingsScreen(currencyViewModel)
         }
 
         composable(
