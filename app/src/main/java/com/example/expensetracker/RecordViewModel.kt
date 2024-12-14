@@ -36,6 +36,19 @@ class RecordViewModel(private val repository: RecordRepository) : ViewModel() {
         }
     }
 
+    fun getNegativeSpendingGroupedByCategory(month: Int): Flow<Map<String, Double>> {
+        return repository.getAllRecords().map { records ->
+            records.filter { record ->
+                val date = LocalDate.parse(record.date, DateTimeFormatter.ISO_DATE)
+                record.amount < 0 && date.monthValue == month
+            }
+                .groupBy { it.category }  // Group by category
+                .mapValues { entry ->
+                    entry.value.sumOf { it.convertedAmount } // Sum the convertedAmount per category
+                }
+        }
+    }
+
     // Function to save a record
     fun saveRecord(record: Record) {
         viewModelScope.launch {

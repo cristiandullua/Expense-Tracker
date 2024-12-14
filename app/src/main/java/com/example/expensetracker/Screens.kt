@@ -3,6 +3,8 @@
 package com.example.expensetracker
 
 import android.annotation.SuppressLint
+import android.graphics.Paint
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,15 +14,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
@@ -59,6 +65,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -75,20 +83,27 @@ import kotlin.math.absoluteValue
 
 @Composable
 fun HomeScreen(recordViewModel: RecordViewModel) {
-    // Select the current month (or you can set it to a default month or let the user select it)
-    val currentMonth = remember { mutableIntStateOf(1) } // Start with January as the default
+    val currentMonth = remember { mutableIntStateOf(1) }
     val negativeExpenses by recordViewModel.getNegativeExpensesGroupedByCurrencyAndMonth(currentMonth.intValue).collectAsState(initial = emptyMap())
+    val categorySpending by recordViewModel.getNegativeSpendingGroupedByCategory(currentMonth.intValue).collectAsState(initial = emptyMap())
 
-    // UI to display the currencies and their sum of expenses
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
         Spacer(modifier = Modifier.height(70.dp)) // Add space for top bar visibility
 
-        Text(text = "Spending per Currency", style = MaterialTheme.typography.headlineSmall)
+        // Spending per Currency Title
+        Text(
+            text = "Spending per Currency",
+            style = MaterialTheme.typography.headlineSmall
+        )
 
         // Month selector dropdown with title in the same row
         MonthSelector(currentMonth = currentMonth)
 
-        // Enclose the cards in a Surface (box-like container)
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.medium,
@@ -96,7 +111,6 @@ fun HomeScreen(recordViewModel: RecordViewModel) {
             shadowElevation = 4.dp
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // If no records exist for the selected month, show a message
                 if (negativeExpenses.isEmpty()) {
                     Text(
                         text = "No expenses recorded for this month.",
@@ -105,7 +119,6 @@ fun HomeScreen(recordViewModel: RecordViewModel) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    // Display each currency and its total spending
                     negativeExpenses.forEach { (currency, totalAmount) ->
                         CurrencyCard(currency = currency, totalAmount = totalAmount)
                     }
@@ -113,8 +126,108 @@ fun HomeScreen(recordViewModel: RecordViewModel) {
             }
         }
 
-        // Horizontal Divider after the widget
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
+
+        // Spending per Category Title
+        Text(
+            text = "Spending per Category",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(vertical = 16.dp)
+        )
+
+        // Unified Surface for the Pie Chart and Category List
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shadowElevation = 4.dp
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                if (categorySpending.isEmpty()) {
+                    // Message if no records are available
+                    Text(
+                        text = "No categories available for this month.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                } else {
+                    // Display Pie Chart
+                    SpendingPieChart(categories = categorySpending, totalAmount = categorySpending.values.sum())
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Display Category List
+                    SpendingCategoryList(categories = categorySpending, totalAmount = categorySpending.values.sum())
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(150.dp)) // Bottom padding
+    }
+}
+
+@Composable
+fun SpendingPieChart(categories: Map<String, Double>, totalAmount: Double) {
+    val categoryColors = listOf(
+        Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta,
+        Color.Cyan, Color.Gray, Color.LightGray, Color.DarkGray, Color.Black
+    )
+
+    val categoryEntries = categories.entries.toList()
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f) // Makes the container square
+            .padding(16.dp)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            var startAngle = 0f
+            categoryEntries.forEachIndexed { index, entry ->
+                val sweepAngle = (entry.value / totalAmount) * 360f
+                drawArc(
+                    color = categoryColors[index % categoryColors.size],
+                    startAngle = startAngle,
+                    sweepAngle = sweepAngle.toFloat(),
+                    useCenter = true
+                )
+                startAngle += sweepAngle.toFloat()
+            }
+        }
+    }
+}
+
+@Composable
+fun SpendingCategoryList(categories: Map<String, Double>, totalAmount: Double) {
+    val categoryColors = listOf(
+        Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta,
+        Color.Cyan, Color.Gray, Color.LightGray, Color.DarkGray, Color.Black
+    )
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        categories.entries.forEachIndexed { index, entry ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 4.dp)
+            ) {
+                // Color box for the category
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .background(categoryColors[index % categoryColors.size], MaterialTheme.shapes.small)
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Display category name and percentage
+                Text(
+                    text = "${entry.key}: ${(entry.value / totalAmount * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
     }
 }
 
@@ -363,7 +476,6 @@ fun convertDateToTimestamp(dateString: String): Long {
     return date?.time ?: 0L
 }
 
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun CreateRecordScreen(
     navController: NavController,
