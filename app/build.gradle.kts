@@ -120,4 +120,7 @@ dependencies {
 
     // optional - Multiprocess support
     implementation (libs.androidx.work.multiprocess)
+
+    implementation (libs.androidx.navigation.compose.v260) // Update to the latest version
+    implementation (libs.ui) // Ensure you're using the latest version
 }

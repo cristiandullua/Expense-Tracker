@@ -3,8 +3,6 @@
 package com.example.expensetracker
 
 import android.annotation.SuppressLint
-import android.graphics.Paint
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -68,7 +66,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -85,9 +82,9 @@ import kotlin.math.absoluteValue
 
 @Composable
 fun HomeScreen(recordViewModel: RecordViewModel) {
-    val currentMonth = remember { mutableStateOf(1) }
-    val negativeExpenses by recordViewModel.getNegativeExpensesGroupedByCurrencyAndMonth(currentMonth.value).collectAsState(initial = emptyMap())
-    val categorySpending by recordViewModel.getNegativeSpendingGroupedByCategory(currentMonth.value).collectAsState(initial = emptyMap())
+    val currentMonth = remember { mutableIntStateOf(1) }
+    val negativeExpenses by recordViewModel.getNegativeExpensesGroupedByCurrencyAndMonth(currentMonth.intValue).collectAsState(initial = emptyMap())
+    val categorySpending by recordViewModel.getNegativeSpendingGroupedByCategory(currentMonth.intValue).collectAsState(initial = emptyMap())
 
     Column(
         modifier = Modifier
@@ -95,8 +92,6 @@ fun HomeScreen(recordViewModel: RecordViewModel) {
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Spacer(modifier = Modifier.height(70.dp)) // Add space for top bar visibility
-
         // Spending per Currency Title
         Text(
             text = "Spending per Currency",
@@ -361,7 +356,6 @@ fun SettingsScreen(currencyViewModel: CurrencyViewModel) {
     val baseCurrencyName = currencies.find { it.code == baseCurrencyCode }?.name ?: "Unknown"
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Settings") }) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -545,7 +539,6 @@ fun CreateRecordScreen(
     val currencies by currencyViewModel.currencies
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Add Record") }) }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -1042,11 +1035,7 @@ fun RecordsScreen(
             .thenByDescending { it.id } // Replace `id` with the actual property name for the ID
     )
 
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Records") })
-        }
-    ) { innerPadding ->
+    Scaffold() { innerPadding ->
         if (sortedRecords.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -1177,14 +1166,4 @@ fun RecordItem(
             }
         }
     }
-}
-
-@Composable
-fun Header(title: String) {
-    TopAppBar(
-        title = { Text(title) },
-        actions = {
-
-        }
-    )
 }
