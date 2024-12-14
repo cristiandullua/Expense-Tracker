@@ -21,9 +21,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
@@ -49,8 +46,8 @@ fun MainScaffold(
     recordViewModel: RecordViewModel,
     currencyViewModel: CurrencyViewModel
 ) {
-    // Remember selected navigation item
-    var selectedItem by remember { mutableStateOf(0) }
+    // Observe the current route using navController.currentBackStackEntryAsState()
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
 
     // Explicitly define the type of navigationItems
     val navigationItems: List<Pair<Destinations, ImageVector>> = listOf(
@@ -59,8 +56,8 @@ fun MainScaffold(
         Destinations.Settings to Icons.Default.Settings
     )
 
-    // Observe the current route using navController.currentBackStackEntryAsState()
-    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    // Dynamically determine the selected item based on current route
+    val selectedItem = navigationItems.indexOfFirst { it.first.route == currentBackStackEntry?.destination?.route }
 
     Scaffold(
         topBar = {
@@ -125,7 +122,6 @@ fun MainScaffold(
                         label = { Text(destination.route.capitalize()) },
                         selected = selectedItem == index,
                         onClick = {
-                            selectedItem = index
                             navController.navigate(destination.route) {
                                 popUpTo(Destinations.CreateRecord.route) { inclusive = true }
                                 launchSingleTop = true

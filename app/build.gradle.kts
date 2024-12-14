@@ -123,4 +123,7 @@ dependencies {
 
     implementation (libs.androidx.navigation.compose.v260) // Update to the latest version
     implementation (libs.ui) // Ensure you're using the latest version
+
+    implementation (libs.androidx.biometric)
+    implementation (libs.androidx.security.crypto)
 }

@@ -2,6 +2,7 @@
 
 package com.example.expensetracker
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,8 +32,13 @@ class MainActivity : ComponentActivity() {
         val recordRepository = RecordRepository(database.recordDao())
         recordViewModel = ViewModelProvider(this, RecordViewModelFactory(recordRepository))[RecordViewModel::class.java]
 
+        // Get the context from the current Composable
+        val context: Context = applicationContext
+
         val currencyRepository = CurrencyRepository(database.currencyDao())
-        currencyViewModel = CurrencyViewModel(currencyRepository, recordRepository).apply {
+        val factory = CurrencyViewModelFactory(context, currencyRepository, recordRepository)
+
+        currencyViewModel = ViewModelProvider(this, factory)[CurrencyViewModel::class.java].apply {
             initializeCurrencies()
         }
     }
