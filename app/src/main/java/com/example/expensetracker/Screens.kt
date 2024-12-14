@@ -4,6 +4,7 @@ package com.example.expensetracker
 
 import android.annotation.SuppressLint
 import android.graphics.Paint
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -83,9 +85,9 @@ import kotlin.math.absoluteValue
 
 @Composable
 fun HomeScreen(recordViewModel: RecordViewModel) {
-    val currentMonth = remember { mutableIntStateOf(1) }
-    val negativeExpenses by recordViewModel.getNegativeExpensesGroupedByCurrencyAndMonth(currentMonth.intValue).collectAsState(initial = emptyMap())
-    val categorySpending by recordViewModel.getNegativeSpendingGroupedByCategory(currentMonth.intValue).collectAsState(initial = emptyMap())
+    val currentMonth = remember { mutableStateOf(1) }
+    val negativeExpenses by recordViewModel.getNegativeExpensesGroupedByCurrencyAndMonth(currentMonth.value).collectAsState(initial = emptyMap())
+    val categorySpending by recordViewModel.getNegativeSpendingGroupedByCategory(currentMonth.value).collectAsState(initial = emptyMap())
 
     Column(
         modifier = Modifier
@@ -167,6 +169,7 @@ fun HomeScreen(recordViewModel: RecordViewModel) {
     }
 }
 
+
 @Composable
 fun SpendingPieChart(categories: Map<String, Double>, totalAmount: Double) {
     val categoryColors = listOf(
@@ -205,27 +208,61 @@ fun SpendingCategoryList(categories: Map<String, Double>, totalAmount: Double) {
         Color.Cyan, Color.Gray, Color.LightGray, Color.DarkGray, Color.Black
     )
 
+    // Sort categories by value in descending order
+    val sortedCategories = categories.entries.sortedBy { it.value }
+
     Column(modifier = Modifier.fillMaxWidth()) {
-        categories.entries.forEachIndexed { index, entry ->
+        sortedCategories.chunked(2).forEach { rowCategories ->
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 4.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Color box for the category
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .background(categoryColors[index % categoryColors.size], MaterialTheme.shapes.small)
-                )
+                rowCategories.forEachIndexed { index, entry ->
+                    Card(
+                        modifier = Modifier
+                            .weight(1f) // Ensures even spacing between two cards
+                            .padding(4.dp), // Reduced padding between cards
+                        shape = MaterialTheme.shapes.medium,
+                        elevation = CardDefaults.elevatedCardElevation()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(8.dp) // Minimal padding inside the card
+                        ) {
+                            // Color indicator circle
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .background(
+                                        color = categoryColors[sortedCategories.indexOf(entry) % categoryColors.size],
+                                        shape = CircleShape
+                                    )
+                            )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
 
-                // Display category name and percentage
-                Text(
-                    text = "${entry.key}: ${(entry.value / totalAmount * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                            // Category details
+                            Column {
+                                Text(
+                                    text = entry.key,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+
+                                Text(
+                                    text = "${(entry.value / totalAmount * 100).toInt()}%",
+                                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Add an invisible spacer card to fill the space if there's only one card in the last row
+                if (rowCategories.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f).padding(4.dp))
+                }
             }
         }
     }
@@ -238,10 +275,8 @@ fun MonthSelector(currentMonth: MutableState<Int>) {
         "July", "August", "September", "October", "November", "December"
     )
 
-    // State to control the dropdown expanded state
     val expanded = remember { mutableStateOf(false) }
 
-    // Row containing the title and dropdown
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -249,14 +284,12 @@ fun MonthSelector(currentMonth: MutableState<Int>) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Title for the Month Selector
         Text(
             text = "Select Month",
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        // Box containing the dropdown selector
         Box(
             modifier = Modifier
                 .weight(1f) // Make it take the remaining space
@@ -276,7 +309,6 @@ fun MonthSelector(currentMonth: MutableState<Int>) {
                 style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
             )
 
-            // Show the dropdown menu when expanded is true
             DropdownMenu(
                 expanded = expanded.value,
                 onDismissRequest = { expanded.value = false }
@@ -285,8 +317,8 @@ fun MonthSelector(currentMonth: MutableState<Int>) {
                     DropdownMenuItem(
                         text = { Text(text = month) },
                         onClick = {
-                            currentMonth.value = index + 1 // Index starts at 0, so we add 1 for the month number
-                            expanded.value = false // Close the dropdown after selection
+                            currentMonth.value = index + 1
+                            expanded.value = false
                         }
                     )
                 }
