@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Divider
+import androidx.compose.material3.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
@@ -42,6 +42,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -239,6 +240,9 @@ fun CreateRecordScreen(
     var selectedCurrency by remember { mutableStateOf("USD") } // Default to USD
     var currencyExpanded by remember { mutableStateOf(false) }
     var isIncome by remember { mutableStateOf(false) } // Track if it's an expense or income
+    var isSaving by remember { mutableStateOf(false) } // State to track saving process
+    var convertedAmount by remember { mutableStateOf<Double?>(null) } // State to hold converted amount
+
     val categories = listOf("Food", "Transport", "Rent", "Entertainment")
 
     // Get the list of currencies from the view model
@@ -401,29 +405,51 @@ fun CreateRecordScreen(
             item {
                 Button(
                     onClick = {
-                        val recordAmount = amount.toDoubleOrNull() ?: 0.0
-
-                        // Save the record to the database
-                        val record = Record(
-                            amount = if (isIncome) recordAmount else -recordAmount, // Convert based on switch
-                            date = convertMillisToDatabaseFormat(dateTimestamp), // Store date in YYYY-MM-DD format
-                            category = selectedCategory,
-                            description = description,
-                            currency = selectedCurrency // Save currency code
-                        )
-                        recordViewModel.saveRecord(record)
-
-                        // Navigate back to the previous screen
-                        navController.popBackStack()
+                        isSaving = true // Trigger state change to start coroutine work
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSaving // Disable button during saving process
                 ) {
-                    Text(text = "Save Record")
+                    Text(text = if (isSaving) "Saving..." else "Save Record")
                 }
             }
         }
     }
+    // Perform coroutine work when isSaving becomes true
+    if (isSaving) {
+        LaunchedEffect(isSaving) {
+            try {
+                val recordAmount = amount.toDoubleOrNull() ?: 0.0
+                val record = Record(
+                    amount = if (isIncome) recordAmount else -recordAmount, // Convert based on switch
+                    date = convertMillisToDatabaseFormat(dateTimestamp), // Store date in YYYY-MM-DD format
+                    category = selectedCategory,
+                    description = description,
+                    currency = selectedCurrency // Save currency code
+                )
+
+                val baseCurrencyCode = currencyViewModel.baseCurrency.value
+                val result = baseCurrencyCode.let {
+                    currencyViewModel.fetchAndConvertAmount(record) // Suspend function
+                }
+
+                convertedAmount = result // Update state with converted amount
+
+                // Save record with the converted amount
+                val recordWithConversion = record.copy(convertedAmount = result ?: 0.0)
+                recordViewModel.saveRecord(recordWithConversion)
+
+                // Navigate back
+                navController.popBackStack()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isSaving = false // Reset saving state
+            }
+        }
+    }
 }
+
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -453,6 +479,7 @@ fun EditRecordScreen(
 
         // Determine the switch state based on the amount
         var isIncome by remember { mutableStateOf(currentRecord.amount > 0) }
+        var isSaving by remember { mutableStateOf(false) }
 
         Scaffold(
             topBar = {
@@ -630,26 +657,48 @@ fun EditRecordScreen(
 
                 // Save record button
                 item {
-                    val recordAmount = amount.toDoubleOrNull() ?: 0.0
-
                     Button(
                         onClick = {
-                            val updatedRecord = currentRecord.copy(
-                                amount = if (isIncome) recordAmount else -recordAmount, // Convert based on switch
-                                date = convertMillisToDatabaseFormat(dateTimestamp), // Store date in YYYY-MM-DD format
-                                category = selectedCategory,
-                                description = description,
-                                currency = selectedCurrency // Save currency code
-                            )
-                            viewModel.updateRecord(updatedRecord)
-                            navController.popBackStack() // Go back to the previous screen
+                            isSaving = true // Trigger saving process
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isSaving // Disable button during saving process
                     ) {
-                        Text(text = "Save Changes")
+                        Text(text = if (isSaving) "Saving..." else "Save Changes")
                     }
                 }
             }
+            // Perform coroutine work when isSaving becomes true
+            if (isSaving) {
+                LaunchedEffect(isSaving) {
+                    try {
+                        val recordAmount = amount.toDoubleOrNull() ?: 0.0
+                        val updatedRecord = currentRecord.copy(
+                            amount = if (isIncome) recordAmount else -recordAmount, // Convert based on switch
+                            date = convertMillisToDatabaseFormat(dateTimestamp), // Store date in YYYY-MM-DD format
+                            category = selectedCategory,
+                            description = description,
+                            currency = selectedCurrency // Save currency code
+                        )
+
+                        val baseCurrencyCode = currencyViewModel.baseCurrency.value
+                        val result = baseCurrencyCode.let {
+                            currencyViewModel.fetchAndConvertAmount(updatedRecord) // Suspend function
+                        }
+
+                        val recordWithConversion = updatedRecord.copy(convertedAmount = result ?: 0.0)
+                        viewModel.updateRecord(recordWithConversion)
+
+                        // Navigate back after successful save
+                        navController.popBackStack()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    } finally {
+                        isSaving = false // Reset saving state
+                    }
+                }
+            }
+
         }
     } ?: run {
         // Show loading state while the record is being fetched
@@ -744,13 +793,14 @@ fun RecordItem(
                 }
             }
 
-            // Right Column for amount and currency
+// Right Column for amount and currency
             Column(
                 modifier = Modifier
                     .weight(2f)
                     .wrapContentWidth(Alignment.End),
                 horizontalAlignment = Alignment.End
             ) {
+                // Main displayed amount and currency
                 Row(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
@@ -773,6 +823,31 @@ fun RecordItem(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     )
+                }
+
+                // Original amount and currency when displaying in base currency
+                if (displayInBaseCurrency) {
+                    Spacer(modifier = Modifier.height(4.dp)) // Small spacing
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${record.amount}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Normal,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) // Slightly dimmed color
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = record.currency,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontWeight = FontWeight.Light,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) // Slightly dimmed color
+                            )
+                        )
+                    }
                 }
             }
         }

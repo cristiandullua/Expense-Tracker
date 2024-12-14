@@ -82,4 +82,10 @@ class CurrencyViewModel(
             }
         }
     }
+
+    suspend fun fetchAndConvertAmount(record: Record): Double? {
+        val baseCurrencyCode = _baseCurrency.value
+        val rate = currencyRepository.getHistoricalRate(record.date, record.currency, baseCurrencyCode)
+        return rate?.let { (record.amount / it).toBigDecimal().setScale(2, java.math.RoundingMode.HALF_EVEN).toDouble() }
+    }
 }
