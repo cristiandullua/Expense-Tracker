@@ -2,7 +2,6 @@
 
 package com.example.expensetracker
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,7 +24,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.room.Room
 
 class MainActivity : ComponentActivity() {
     private lateinit var recordViewModel: RecordViewModel
@@ -34,11 +32,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Initialize Room database
-        val database = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java,
-            "expense_tracker_db_v9"
-        ).build()
+        val database = AppDatabase.getDatabase(applicationContext)
 
         val repository = RecordRepository(database.recordDao())
         val factory = RecordViewModelFactory(repository)
@@ -54,7 +48,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel) {
     val navController = rememberNavController()
@@ -109,13 +102,15 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
                         }
                     }
                 }
-            ) {
+            ) { paddingValues -> // Use paddingValues here
                 // Display different screens based on selected item
                 when (selectedItem) {
                     0 -> HomeScreen()
                     1 -> RecordsScreen(recordViewModel = recordViewModel, currencyViewModel = currencyViewModel, navController = navController) // Pass viewModel here
                     2 -> SettingsScreen(currencyViewModel = currencyViewModel) // Pass navController for consistency
                 }
+                // Apply the content padding to your screens
+                Modifier.padding(paddingValues)
             }
         }
 

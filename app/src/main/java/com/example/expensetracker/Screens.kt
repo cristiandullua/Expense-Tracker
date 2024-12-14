@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -247,7 +248,19 @@ fun CreateRecordScreen(
     var isSaving by remember { mutableStateOf(false) } // State to track saving process
     var convertedAmount by remember { mutableStateOf<Double?>(null) } // State to hold converted amount
 
-    val categories = listOf("Food", "Transport", "Rent", "Entertainment")
+    val categories = listOf(
+        "Food",
+        "Transport",
+        "Rent",
+        "Entertainment",
+        "Utilities",
+        "Healthcare",
+        "Shopping",
+        "Savings",
+        "Travel",
+        "Income",
+        "Others"
+    )
 
     // Get the list of currencies from the view model
     val currencies by currencyViewModel.currencies
@@ -483,8 +496,19 @@ fun EditRecordScreen(
         var selectedCurrency by remember { mutableStateOf(currentRecord.currency) }
         var currencyExpanded by remember { mutableStateOf(false) }
         var showDatePicker by remember { mutableStateOf(false) }
-        val categories = listOf("Food", "Transport", "Rent", "Entertainment")
-        // Get the list of currencies from the view model
+        val categories = listOf(
+            "Food",
+            "Transport",
+            "Rent",
+            "Entertainment",
+            "Utilities",
+            "Healthcare",
+            "Shopping",
+            "Savings",
+            "Travel",
+            "Income",
+            "Others"
+        )
         val currencies by currencyViewModel.currencies
 
         // Determine the switch state based on the amount
@@ -733,12 +757,18 @@ fun RecordsScreen(
     val baseCurrency by currencyViewModel.baseCurrency // Base currency state
     val displayInBaseCurrency by currencyViewModel.displayInBaseCurrency // Display flag
 
+    // Sort records by date and ID in descending order
+    val sortedRecords = records.sortedWith(
+        compareByDescending<Record> { it.date } // Replace `date` with the actual property name for the date
+            .thenByDescending { it.id } // Replace `id` with the actual property name for the ID
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Records") })
         }
     ) { innerPadding ->
-        if (records.isEmpty()) {
+        if (sortedRecords.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -752,9 +782,10 @@ fun RecordsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 150.dp) // Add extra bottom padding for safety
             ) {
-                items(records) { record ->
+                items(sortedRecords) { record ->
                     RecordItem(
                         record = record,
                         navController = navController,
