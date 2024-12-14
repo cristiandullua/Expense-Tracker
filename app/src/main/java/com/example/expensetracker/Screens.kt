@@ -3,6 +3,8 @@
 package com.example.expensetracker
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,28 +27,32 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,8 +74,137 @@ import java.util.TimeZone
 import kotlin.math.absoluteValue
 
 @Composable
-fun HomeScreen() {
-    Text(text = "Home Screen")
+fun HomeScreen(recordViewModel: RecordViewModel) {
+    // Select the current month (or you can set it to a default month or let the user select it)
+    val currentMonth = remember { mutableIntStateOf(1) } // Start with January as the default
+    val negativeExpenses by recordViewModel.getNegativeExpensesGroupedByCurrencyAndMonth(currentMonth.intValue).collectAsState(initial = emptyMap())
+
+    // UI to display the currencies and their sum of expenses
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Spacer(modifier = Modifier.height(70.dp)) // Add space for top bar visibility
+
+        Text(text = "Spending per Currency", style = MaterialTheme.typography.headlineSmall)
+
+        // Month selector dropdown with title in the same row
+        MonthSelector(currentMonth = currentMonth)
+
+        // Enclose the cards in a Surface (box-like container)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shadowElevation = 4.dp
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                // If no records exist for the selected month, show a message
+                if (negativeExpenses.isEmpty()) {
+                    Text(
+                        text = "No expenses recorded for this month.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(8.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    // Display each currency and its total spending
+                    negativeExpenses.forEach { (currency, totalAmount) ->
+                        CurrencyCard(currency = currency, totalAmount = totalAmount)
+                    }
+                }
+            }
+        }
+
+        // Horizontal Divider after the widget
+        HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
+    }
+}
+
+@Composable
+fun MonthSelector(currentMonth: MutableState<Int>) {
+    val months = listOf(
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    )
+
+    // State to control the dropdown expanded state
+    val expanded = remember { mutableStateOf(false) }
+
+    // Row containing the title and dropdown
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp), // Padding to give space around
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Title for the Month Selector
+        Text(
+            text = "Select Month",
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        // Box containing the dropdown selector
+        Box(
+            modifier = Modifier
+                .weight(1f) // Make it take the remaining space
+                .clickable { expanded.value = !expanded.value } // Make the entire box clickable
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), // Border color
+                    shape = MaterialTheme.shapes.small // Rounded corners
+                )
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.1f)) // Light background
+        ) {
+            Text(
+                text = months[currentMonth.value - 1], // Display the selected month
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
+            )
+
+            // Show the dropdown menu when expanded is true
+            DropdownMenu(
+                expanded = expanded.value,
+                onDismissRequest = { expanded.value = false }
+            ) {
+                months.forEachIndexed { index, month ->
+                    DropdownMenuItem(
+                        text = { Text(text = month) },
+                        onClick = {
+                            currentMonth.value = index + 1 // Index starts at 0, so we add 1 for the month number
+                            expanded.value = false // Close the dropdown after selection
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CurrencyCard(currency: String, totalAmount: Double) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.elevatedCardElevation()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = currency, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = "$${"%.2f".format(totalAmount)}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (totalAmount < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
 }
 
 @Composable

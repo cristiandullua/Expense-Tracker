@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class RecordViewModel(private val repository: RecordRepository) : ViewModel() {
 
@@ -17,6 +20,21 @@ class RecordViewModel(private val repository: RecordRepository) : ViewModel() {
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    // Function to get negative expenses grouped by currency and filtered by month
+    fun getNegativeExpensesGroupedByCurrencyAndMonth(month: Int): Flow<Map<String, Double>> {
+        return repository.getAllRecords().map { records ->
+            records.filter { record ->
+                // Parse the date string to LocalDate and check if the record is negative and matches the month
+                val date = LocalDate.parse(record.date, DateTimeFormatter.ISO_DATE) // Parse string to LocalDate
+                record.amount < 0 && date.monthValue == month // Check if the expense is negative and the month matches
+            }
+                .groupBy { it.currency } // Group by currency
+                .mapValues { entry ->
+                    entry.value.sumOf { it.amount } // Sum negative values per currency
+                }
+        }
+    }
 
     // Function to save a record
     fun saveRecord(record: Record) {

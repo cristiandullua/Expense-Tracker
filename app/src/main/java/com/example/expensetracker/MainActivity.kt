@@ -105,7 +105,7 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
             ) { paddingValues -> // Use paddingValues here
                 // Display different screens based on selected item
                 when (selectedItem) {
-                    0 -> HomeScreen()
+                    0 -> HomeScreen(recordViewModel = recordViewModel)
                     1 -> RecordsScreen(recordViewModel = recordViewModel, currencyViewModel = currencyViewModel, navController = navController) // Pass viewModel here
                     2 -> SettingsScreen(currencyViewModel = currencyViewModel) // Pass navController for consistency
                 }
@@ -151,5 +151,3 @@ fun MyApp(recordViewModel: RecordViewModel, currencyViewModel: CurrencyViewModel
         }
     }
 }
-
-
