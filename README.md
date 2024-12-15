@@ -3,7 +3,7 @@
 This Expense Tracker App allows users to manage their financial transactions by tracking income, expenses, and transfers, all while providing visual spending analytics. The app features integration with a REST API for currency conversion, offline access through a local SQLite database, and a user-friendly design.
 
 ## Demo
-[[Video Here]]([https://www.youtube.com/watch?v=dQw4w9WgXcQ](https://www.youtube.com/watch?v=CfduO4GqTm8))
+[Software Demo Video](https://www.youtube.com/watch?v=CfduO4GqTm8)
 
 ## Features
 - **Track Income, Expenses, and Transfers**: Easily manage various transaction types.
