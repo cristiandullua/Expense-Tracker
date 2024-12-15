@@ -2,7 +2,6 @@
 
 package com.example.expensetracker
 
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,22 +28,24 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun initViewModels() {
+        // Get the database instance
         val database = AppDatabase.getDatabase(applicationContext)
+
+        // Initialize the RecordRepository
         val recordRepository = RecordRepository(database.recordDao())
         recordViewModel = ViewModelProvider(this, RecordViewModelFactory(recordRepository))[RecordViewModel::class.java]
 
-        // Get the context from the current activity
-        val context: Context = applicationContext
+        // Initialize the CurrencyRepository
+        val currencyRepository = CurrencyRepository(database.currencyDao())
 
-        // Create the factory and initialize the SettingsViewModel
-        val settingsViewModelFactory = SettingsViewModelFactory(context)
+        // Initialize the SettingsViewModel using the factory
+        val settingsViewModelFactory = SettingsViewModelFactory(applicationContext, recordRepository, currencyRepository)
         settingsViewModel = ViewModelProvider(this, settingsViewModelFactory)[SettingsViewModel::class.java]
 
-        val currencyRepository = CurrencyRepository(database.currencyDao())
-        val factory = CurrencyViewModelFactory(settingsViewModel, currencyRepository, recordRepository)
-
-        currencyViewModel = ViewModelProvider(this, factory)[CurrencyViewModel::class.java].apply {
-            initializeCurrencies()
+        // Initialize the CurrencyViewModel with its own factory
+        val currencyViewModelFactory = CurrencyViewModelFactory(settingsViewModel, currencyRepository)
+        currencyViewModel = ViewModelProvider(this, currencyViewModelFactory)[CurrencyViewModel::class.java].apply {
+            initializeCurrencies() // Make sure this function initializes the data
         }
     }
 }

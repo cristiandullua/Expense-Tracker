@@ -159,15 +159,20 @@ fun HomeScreen(recordViewModel: RecordViewModel) {
     }
 }
 
-
 @Composable
 fun SpendingPieChart(categories: Map<String, Double>, totalAmount: Double) {
+    // Sort categories by value (descending) to match the list order
+    val sortedCategories = categories.entries.sortedByDescending { it.value }
+
     val categoryColors = listOf(
         Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta,
         Color.Cyan, Color.Gray, Color.LightGray, Color.DarkGray, Color.Black
     )
 
-    val categoryEntries = categories.entries.toList()
+    // Map each category to its color
+    val categoryColorMap = sortedCategories.mapIndexed { index, _ ->
+        categoryColors[index % categoryColors.size]
+    }
 
     Box(
         modifier = Modifier
@@ -177,10 +182,10 @@ fun SpendingPieChart(categories: Map<String, Double>, totalAmount: Double) {
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             var startAngle = 0f
-            categoryEntries.forEachIndexed { index, entry ->
+            sortedCategories.forEachIndexed { index, entry ->
                 val sweepAngle = (entry.value / totalAmount) * 360f
                 drawArc(
-                    color = categoryColors[index % categoryColors.size],
+                    color = categoryColorMap[index],
                     startAngle = startAngle,
                     sweepAngle = sweepAngle.toFloat(),
                     useCenter = true
@@ -193,13 +198,19 @@ fun SpendingPieChart(categories: Map<String, Double>, totalAmount: Double) {
 
 @Composable
 fun SpendingCategoryList(categories: Map<String, Double>, totalAmount: Double) {
+    // Sort categories by percentage (descending)
+    val sortedCategories = categories.entries
+        .sortedByDescending { (it.value / totalAmount) * 100 }
+
     val categoryColors = listOf(
         Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta,
         Color.Cyan, Color.Gray, Color.LightGray, Color.DarkGray, Color.Black
     )
 
-    // Sort categories by value in descending order
-    val sortedCategories = categories.entries.sortedBy { it.value }
+    // Map each category to its color
+    val categoryColorMap = sortedCategories.mapIndexed { index, _ ->
+        categoryColors[index % categoryColors.size]
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         sortedCategories.chunked(2).forEach { rowCategories ->
@@ -224,7 +235,7 @@ fun SpendingCategoryList(categories: Map<String, Double>, totalAmount: Double) {
                                 modifier = Modifier
                                     .size(20.dp)
                                     .background(
-                                        color = categoryColors[sortedCategories.indexOf(entry) % categoryColors.size],
+                                        color = categoryColorMap[sortedCategories.indexOf(entry)],
                                         shape = CircleShape
                                     )
                             )
@@ -240,7 +251,7 @@ fun SpendingCategoryList(categories: Map<String, Double>, totalAmount: Double) {
                                 )
 
                                 Text(
-                                    text = "${(entry.value / totalAmount * 100).toInt()}%",
+                                    text = "${((entry.value / totalAmount) * 100).toInt()}%",
                                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -350,8 +361,7 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel, currencyViewModel: Curr
     val baseCurrencyCode by settingsViewModel.baseCurrency
     val baseCurrencyName = currencies.find { it.code == baseCurrencyCode }?.name ?: "Unknown"
 
-    Scaffold(
-    ) { innerPadding ->
+    Scaffold { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -533,8 +543,7 @@ fun CreateRecordScreen(
     // Get the list of currencies from the view model
     val currencies by currencyViewModel.currencies
 
-    Scaffold(
-    ) { innerPadding ->
+    Scaffold { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -1014,7 +1023,7 @@ fun RecordsScreen(
             .thenByDescending { it.id } // Replace `id` with the actual property name for the ID
     )
 
-    Scaffold() { innerPadding ->
+    Scaffold { innerPadding ->
         if (sortedRecords.isEmpty()) {
             Box(
                 modifier = Modifier

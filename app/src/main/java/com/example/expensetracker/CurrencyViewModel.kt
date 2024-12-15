@@ -4,12 +4,10 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class CurrencyViewModel(
     private val currencyRepository: CurrencyRepository,
-    private val recordRepository: RecordRepository,
     private val settingsViewModel: SettingsViewModel // Inject SettingsViewModel here
 ) : ViewModel() {
 
@@ -33,23 +31,6 @@ class CurrencyViewModel(
         viewModelScope.launch {
             currencyRepository.fetchAndStoreCurrencies()
             loadCurrenciesFromDatabase() // Reload after fetching
-        }
-    }
-
-    // Update records with converted amounts
-    private fun updateConvertedAmounts() {
-        viewModelScope.launch {
-            val baseCurrencyCode = settingsViewModel.baseCurrency.value
-            recordRepository.getAllRecords().first().forEach { record ->
-                val rate = currencyRepository.getHistoricalRate(record.date, record.currency, baseCurrencyCode)
-                if (rate != null) {
-                    val convertedAmount = (record.amount / rate).toBigDecimal()
-                        .setScale(2, java.math.RoundingMode.HALF_EVEN)
-                        .toDouble()
-                    val updatedRecord = record.copy(convertedAmount = convertedAmount)
-                    recordRepository.update(updatedRecord)
-                }
-            }
         }
     }
 

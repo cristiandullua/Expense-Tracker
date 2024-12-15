@@ -46,7 +46,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -121,7 +120,6 @@ dependencies {
     // optional - Multiprocess support
     implementation (libs.androidx.work.multiprocess)
 
-    implementation (libs.androidx.navigation.compose.v260) // Update to the latest version
     implementation (libs.ui) // Ensure you're using the latest version
 
     implementation (libs.androidx.biometric)

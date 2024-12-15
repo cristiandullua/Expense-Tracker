@@ -6,10 +6,9 @@ import androidx.lifecycle.ViewModelProvider
 class CurrencyViewModelFactory(
     private val settingsViewModel: SettingsViewModel,
     private val currencyRepository: CurrencyRepository,
-    private val recordRepository: RecordRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return CurrencyViewModel(currencyRepository, recordRepository, settingsViewModel) as T
+        return CurrencyViewModel(currencyRepository, settingsViewModel) as T
     }
 }
 

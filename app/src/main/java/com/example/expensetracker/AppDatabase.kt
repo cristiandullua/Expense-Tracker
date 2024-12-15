@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Record::class, Currency::class], version = 8)
+@Database(entities = [Record::class, Currency::class], version = 1)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun recordDao(): RecordDao
     abstract fun currencyDao(): CurrencyDao
@@ -19,7 +19,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "expense_tracker_database_v3"
+                    "expense_tracker_database"
                 )
                     .build()
                 INSTANCE = instance

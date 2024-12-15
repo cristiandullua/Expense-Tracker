@@ -34,7 +34,6 @@ import androidx.navigation.navArgument
 sealed class Destinations(val route: String) {
     object Home : Destinations("home")
     object CreateRecord : Destinations("createRecord")
-    object EditRecord : Destinations("editRecord/{recordId}") // Path parameter for recordId
     object Records : Destinations("records")
     object Settings : Destinations("settings")
 }
@@ -120,7 +119,7 @@ fun MainScaffold(
                 navigationItems.forEachIndexed { index, (destination, icon) ->
                     NavigationBarItem(
                         icon = { Icon(icon, contentDescription = destination.route) },
-                        label = { Text(destination.route.capitalize()) },
+                        label = { Text(destination.route.capitalize(java.util.Locale.ROOT)) },
                         selected = selectedItem == index,
                         onClick = {
                             navController.navigate(destination.route) {
