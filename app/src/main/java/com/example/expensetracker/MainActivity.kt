@@ -14,6 +14,7 @@ import com.example.expensetracker.ui.theme.ExpenseTrackerTheme
 class MainActivity : ComponentActivity() {
     private lateinit var recordViewModel: RecordViewModel
     private lateinit var currencyViewModel: CurrencyViewModel
+    private lateinit var settingsViewModel: SettingsViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,7 +23,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             ExpenseTrackerTheme {
                 val navController = rememberNavController()
-                MainScaffold(navController, recordViewModel, currencyViewModel)
+                MainScaffold(navController, recordViewModel, currencyViewModel, settingsViewModel)
             }
         }
     }
@@ -32,11 +33,15 @@ class MainActivity : ComponentActivity() {
         val recordRepository = RecordRepository(database.recordDao())
         recordViewModel = ViewModelProvider(this, RecordViewModelFactory(recordRepository))[RecordViewModel::class.java]
 
-        // Get the context from the current Composable
+        // Get the context from the current activity
         val context: Context = applicationContext
 
+        // Create the factory and initialize the SettingsViewModel
+        val settingsViewModelFactory = SettingsViewModelFactory(context)
+        settingsViewModel = ViewModelProvider(this, settingsViewModelFactory)[SettingsViewModel::class.java]
+
         val currencyRepository = CurrencyRepository(database.currencyDao())
-        val factory = CurrencyViewModelFactory(context, currencyRepository, recordRepository)
+        val factory = CurrencyViewModelFactory(settingsViewModel, currencyRepository, recordRepository)
 
         currencyViewModel = ViewModelProvider(this, factory)[CurrencyViewModel::class.java].apply {
             initializeCurrencies()

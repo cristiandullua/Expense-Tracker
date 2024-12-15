@@ -27,8 +27,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -42,8 +40,6 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
@@ -51,7 +47,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -348,11 +343,11 @@ fun CurrencyCard(currency: String, totalAmount: Double) {
 }
 
 @Composable
-fun SettingsScreen(currencyViewModel: CurrencyViewModel) {
+fun SettingsScreen(settingsViewModel: SettingsViewModel, currencyViewModel: CurrencyViewModel) {
     var currencyExpanded by remember { mutableStateOf(false) }
-    val displayInBaseCurrency by currencyViewModel.displayInBaseCurrency
+    val displayInBaseCurrency by settingsViewModel.displayInBaseCurrency
     val currencies by currencyViewModel.currencies
-    val baseCurrencyCode by currencyViewModel.baseCurrency
+    val baseCurrencyCode by settingsViewModel.baseCurrency
     val baseCurrencyName = currencies.find { it.code == baseCurrencyCode }?.name ?: "Unknown"
 
     Scaffold(
@@ -394,7 +389,7 @@ fun SettingsScreen(currencyViewModel: CurrencyViewModel) {
                         DropdownMenuItem(
                             text = { Text("${currency.code} - ${currency.name}") },
                             onClick = {
-                                currencyViewModel.setBaseCurrency(currency.code) // Triggering the update
+                                settingsViewModel.setBaseCurrency(currency.code) // Triggering the update
                                 currencyExpanded = false
                             },
                             modifier = Modifier.fillMaxWidth() // Ensure consistent width
@@ -403,7 +398,7 @@ fun SettingsScreen(currencyViewModel: CurrencyViewModel) {
                 }
             }
 
-// Display selected currency name below dropdown
+            // Display selected currency name below dropdown
             Text(
                 text = buildAnnotatedString {
                     append("Selected Currency: ")
@@ -414,7 +409,6 @@ fun SettingsScreen(currencyViewModel: CurrencyViewModel) {
                 },
                 style = MaterialTheme.typography.bodyMedium // Apply the default body style for the entire text
             )
-
 
             // Divider between sections
             HorizontalDivider(modifier = Modifier.fillMaxWidth())
@@ -429,11 +423,11 @@ fun SettingsScreen(currencyViewModel: CurrencyViewModel) {
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f)
                 )
-// In your SettingsScreen composable, inside the Switch onCheckedChange:
+
                 Switch(
                     checked = displayInBaseCurrency,
                     onCheckedChange = { newState ->
-                        currencyViewModel.setDisplayInBaseCurrency(newState) // Triggering the update
+                        settingsViewModel.setDisplayInBaseCurrency(newState) // Triggering the update
                     }
                 )
             }
@@ -506,7 +500,8 @@ fun convertDateToTimestamp(dateString: String): Long {
 fun CreateRecordScreen(
     navController: NavController,
     recordViewModel: RecordViewModel,
-    currencyViewModel: CurrencyViewModel
+    currencyViewModel: CurrencyViewModel,
+    settingsViewModel: SettingsViewModel
 ) {
     var amount by remember { mutableStateOf("") }
     var dateDisplay by remember { mutableStateOf("Pick a date") }
@@ -723,7 +718,7 @@ fun CreateRecordScreen(
                     currency = selectedCurrency // Save currency code
                 )
 
-                val baseCurrencyCode = currencyViewModel.baseCurrency.value
+                val baseCurrencyCode = settingsViewModel.baseCurrency.value
                 val result = baseCurrencyCode.let {
                     currencyViewModel.fetchAndConvertAmount(record) // Suspend function
                 }
@@ -752,7 +747,8 @@ fun EditRecordScreen(
     navController: NavController,
     recordFlow: Flow<Record?>,
     viewModel: RecordViewModel,
-    currencyViewModel: CurrencyViewModel
+    currencyViewModel: CurrencyViewModel,
+    settingsViewModel: SettingsViewModel
 ) {
     // Collect the record from the Flow
     val record by recordFlow.collectAsState(initial = null)
@@ -787,24 +783,7 @@ fun EditRecordScreen(
         var isIncome by remember { mutableStateOf(currentRecord.amount > 0) }
         var isSaving by remember { mutableStateOf(false) }
 
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Edit Record") },
-                    actions = {
-                        IconButton(onClick = {
-                            viewModel.deleteRecord(currentRecord)
-                            navController.popBackStack() // Navigate back after deletion
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Record"
-                            )
-                        }
-                    }
-                )
-            }
-        ) { innerPadding ->
+        Scaffold { innerPadding ->
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -993,7 +972,7 @@ fun EditRecordScreen(
                             currency = selectedCurrency // Save currency code
                         )
 
-                        val baseCurrencyCode = currencyViewModel.baseCurrency.value
+                        val baseCurrencyCode = settingsViewModel.baseCurrency.value
                         val result = baseCurrencyCode.let {
                             currencyViewModel.fetchAndConvertAmount(updatedRecord) // Suspend function
                         }
@@ -1022,12 +1001,12 @@ fun EditRecordScreen(
 @Composable
 fun RecordsScreen(
     recordViewModel: RecordViewModel,
-    currencyViewModel: CurrencyViewModel,
+    settingsViewModel: SettingsViewModel,
     navController: NavController
 ) {
     val records by recordViewModel.allRecords.collectAsState(initial = emptyList())
-    val baseCurrency by currencyViewModel.baseCurrency // Base currency state
-    val displayInBaseCurrency by currencyViewModel.displayInBaseCurrency // Display flag
+    val baseCurrency by settingsViewModel.baseCurrency // Base currency state
+    val displayInBaseCurrency by settingsViewModel.displayInBaseCurrency // Display flag
 
     // Sort records by date and ID in descending order
     val sortedRecords = records.sortedWith(

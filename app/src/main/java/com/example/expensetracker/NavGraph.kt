@@ -44,7 +44,8 @@ sealed class Destinations(val route: String) {
 fun MainScaffold(
     navController: NavHostController,
     recordViewModel: RecordViewModel,
-    currencyViewModel: CurrencyViewModel
+    currencyViewModel: CurrencyViewModel,
+    settingsViewModel: SettingsViewModel
 ) {
     // Observe the current route using navController.currentBackStackEntryAsState()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -142,13 +143,13 @@ fun MainScaffold(
                 HomeScreen(recordViewModel)
             }
             composable(Destinations.Records.route) {
-                RecordsScreen(recordViewModel, currencyViewModel, navController)
+                RecordsScreen(recordViewModel, settingsViewModel, navController)
             }
             composable(Destinations.Settings.route) {
-                SettingsScreen(currencyViewModel)
+                SettingsScreen(settingsViewModel, currencyViewModel)
             }
             composable(Destinations.CreateRecord.route) {
-                CreateRecordScreen(navController, recordViewModel, currencyViewModel)
+                CreateRecordScreen(navController, recordViewModel, currencyViewModel, settingsViewModel)
             }
             composable(
                 "editRecordScreen/{recordId}",
@@ -162,7 +163,8 @@ fun MainScaffold(
                         navController = navController,
                         recordFlow = recordFlow,
                         viewModel = recordViewModel,
-                        currencyViewModel = currencyViewModel
+                        currencyViewModel = currencyViewModel,
+                        settingsViewModel = settingsViewModel
                     )
                 } ?: run {
                     Text("Invalid record ID", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center)
