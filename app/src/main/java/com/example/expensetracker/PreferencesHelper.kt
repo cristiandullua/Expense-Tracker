@@ -20,4 +20,12 @@ class PreferencesHelper(context: Context) {
     fun getDisplayInBaseCurrency(): Boolean {
         return sharedPreferences.getBoolean("displayInBaseCurrency", false)
     }
+
+    fun isBiometricEnabled(): Boolean {
+        return sharedPreferences.getBoolean("biometric_enabled", false)
+    }
+
+    fun saveBiometricEnabled(enabled: Boolean) {
+        sharedPreferences.edit().putBoolean("biometric_enabled", enabled).apply()
+    }
 }

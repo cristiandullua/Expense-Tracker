@@ -61,12 +61,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavController
 import kotlinx.coroutines.flow.Flow
 import java.sql.Date
@@ -362,6 +364,11 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel, currencyViewModel: Curr
     val baseCurrencyCode by settingsViewModel.baseCurrency
     val baseCurrencyName = currencies.find { it.code == baseCurrencyCode }?.name ?: "Unknown"
 
+    val isBiometricEnabled by settingsViewModel.isBiometricEnabled
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+    val biometricAuthHelper = activity?.let { BiometricAuthHelper(it) }
+
     Scaffold { innerPadding ->
         Column(
             modifier = Modifier
@@ -448,6 +455,48 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel, currencyViewModel: Curr
                 text = "When active, all amounts will be displayed in the base currency.",
                 style = MaterialTheme.typography.bodySmall
             )
+
+            // Divider between sections
+            HorizontalDivider(modifier = Modifier.fillMaxWidth())
+
+
+            // Toggle for Displaying Records in Base Currency
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Enable Biometric Login",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Switch(
+                    checked = isBiometricEnabled,
+                    onCheckedChange = { newState ->
+                        settingsViewModel.setBiometricEnabled(newState)
+                        if (newState) {
+                            biometricAuthHelper?.authenticate(
+                                onSuccess = {
+                                    // Biometric authentication successful
+                                },
+                                onFailure = {
+                                    // Handle failure, maybe show an error
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+
+            // Explanation for biometric switch
+            Text(
+                text = "When enabled, future logins will require biometric or passcode authentication.",
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            // Divider between sections
+            HorizontalDivider(modifier = Modifier.fillMaxWidth())
         }
     }
 }

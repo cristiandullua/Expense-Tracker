@@ -26,6 +26,14 @@ class SettingsViewModel(
     private val _displayInBaseCurrency = mutableStateOf(preferencesHelper.getDisplayInBaseCurrency())
     val displayInBaseCurrency: State<Boolean> = _displayInBaseCurrency
 
+    private val _isBiometricEnabled = mutableStateOf(preferencesHelper.isBiometricEnabled()) // Load setting
+    val isBiometricEnabled: State<Boolean> = _isBiometricEnabled
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        _isBiometricEnabled.value = enabled
+        preferencesHelper.saveBiometricEnabled(enabled) // Save setting
+    }
+
     // Function to update the base currency
     fun setBaseCurrency(currency: String) {
         _baseCurrency.value = currency
