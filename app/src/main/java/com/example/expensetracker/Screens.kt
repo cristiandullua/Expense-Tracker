@@ -162,7 +162,8 @@ fun HomeScreen(recordViewModel: RecordViewModel) {
 @Composable
 fun SpendingPieChart(categories: Map<String, Double>, totalAmount: Double) {
     // Sort categories by value (descending) to match the list order
-    val sortedCategories = categories.entries.sortedByDescending { it.value }
+    val sortedCategories = categories.entries
+        .sortedByDescending { (it.value / totalAmount) * 100 }
 
     val categoryColors = listOf(
         Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta,
@@ -748,7 +749,6 @@ fun CreateRecordScreen(
         }
     }
 }
-
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
